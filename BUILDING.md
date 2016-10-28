@@ -35,7 +35,7 @@ Clang is through CMake, which is described [here](http://llvm.org/docs/CMake.htm
 
 Nightly packages of LLVM and Clang can be installed via the [official repository](http://apt.llvm.org/).
 
-## OS X
+### OS X
 
 OS X is shipped with LLVM and Clang, but is uses a custom version of the
 software, which as far as we know isn't suitable for linking. Therefore, you
