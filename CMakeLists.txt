@@ -35,7 +35,7 @@ endforeach()
 initializer_list(arg_list tool_default_args)
 
 #add_definitions("-DDEFAULT_ARGS=\"${tool-default_args}\"")
-configure_file(src/config.h.in src/config.h)
+configure_file(src/config.h.in "${CMAKE_SOURCE_DIR}/src/config.h")
 include_directories("${CMAKE_BINARY_DIR}/src")
 
 llvm_map_components_to_libnames(LLVM_LIBRARIES all)
@@ -44,4 +44,6 @@ add_definitions(${LLVM_DEFINITIONS})
 add_executable(bsls src/list.cpp)
 target_link_libraries(bsls ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
 add_executable(bsgen src/generate.cpp)
+
+install(TARGETS bsls bsgen RUNTIME DESTINATION bin)
 
