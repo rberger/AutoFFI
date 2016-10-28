@@ -32,10 +32,10 @@ struct QualTypeLT {
 };
 
 DeclarationMatcher MyMatcher = anyOf(
-  typedefDecl().bind("typedef"),
-  functionDecl().bind("func"),
-  recordDecl().bind("record"),
-  varDecl(isConstexpr()).bind("var")
+  typedefDecl().bind("ndecl"),
+  functionDecl().bind("ndecl"),
+  recordDecl().bind("ndecl"),
+  varDecl(isConstexpr()).bind("ndecl")
 );
 
 class TypeExtractor : public ConstDeclVisitor<TypeExtractor, const QualType> {
@@ -97,42 +97,20 @@ public:
   }
 
   void run(const MatchFinder::MatchResult &Result) override {
-
     auto& sourceManager(Result.Context->getSourceManager());
-
-    //const Type* type = Result.Nodes.getNodeAs<Type>("type");
-    //if (type) {
-      //auto typeDecl(typeDeclFinder.Visit(type));
-      //if (typeDecl && sourceLocFilter(typeDecl))
-        //types.emplace(type);
-    //}
-
-    const NamedDecl* decl = Result.Nodes.getNodeAs<NamedDecl>("record");
-      //|| Result.Nodes.getNodeAs<FunctionDecl>("func")
-      //|| Result.Nodes.getNodeAs<TypedefDecl>("typedef")
-      //|| Result.Nodes.getNodeAs<VarDecl>("var");
-    if (decl) {
+    const NamedDecl* decl = Result.Nodes.getNodeAs<NamedDecl>("ndecl");
+    if (decl && !decl->isImplicit()) {
       FullSourceLoc fullSourceLoc(decl->getLocation(), sourceManager);
       if (isLocationValid(fullSourceLoc)) {
         decls.emplace(decl);
       }
     }
-
-    //const RecordDecl * decl = Result.Nodes.getNodeAs<RecordDecl>("struct");
-    //if (decl) { //&& !decl->isImplicit()) {
-      //FullSourceLoc fullSourceLoc(decl->getLocation(), Result.Context->getSourceManager());
-      //if (fullSourceLoc.isValid() && !fullSourceLoc.isInSystemHeader()) {
-        //std::cout << decl->getNameAsString() << std::endl;
-        //types.emplace(decl->getTypeForDecl());
-      //}
-    //}
   }
 };
 
 int main(int argc, const char* argv[]) {
   static std::vector<const char*> defaultArgs DEFAULT_ARGS_INITIALIZER;
   std::vector<const char*> args(argv, argv+argc);
-  args.push_back("--");
   std::copy(defaultArgs.begin(), defaultArgs.end(), std::back_inserter(args));
   //std::find(args.begin(), args.end(), "--");
 
@@ -156,7 +134,6 @@ int main(int argc, const char* argv[]) {
   TypeExtractor e;
 
   for (auto decl: nameCollector.decls) {
-    //decl->dump()
     depColl.Visit(e.Visit(decl));
     std::cout << decl->getNameAsString() << std::endl;
   }
