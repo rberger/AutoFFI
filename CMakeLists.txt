@@ -25,6 +25,9 @@ function(initializer_list lst var)
   set(${var} "${acc} }" PARENT_SCOPE)
 endfunction()
 
+foreach(include_dir IN LISTS STDLIB_INCLUDE_DIRS)
+
+endforeach()
 initializer_list(STDLIB_INCLUDE_DIRS tool_default_args)
 
 #add_definitions("-DDEFAULT_ARGS=\"${tool-default_args}\"")

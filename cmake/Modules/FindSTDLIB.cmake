@@ -2,21 +2,29 @@
 # Once done this will define
 #  STDLIB_FOUND - System has standard libraries
 #  STDLIB_INCLUDE_DIRS - The standard libraries include directories
+#  STDLIB_FRAMEWORKS_DIRS - The standard libraries framework directories
 #  STDLIB_LIBRARIES - The libraries needed to use standard libraries
 #  STDLIB_DEFINITIONS - Compiler switches required for using standard libraries
 
 # TODO: for completeness sake, find the static and shared libraries
 
 set(darwin_sierra_include_dirs 
-  "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include"
-  "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX.sdk/usr/include/c++/4.2.1"
-  "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/lib/clang/8.0.0/include"
+  "/usr/local/include"
+  "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../include/c++/v1"
+  "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/bin/../lib/clang/8.0.0/include"
+  "/Applications/Xcode.app/Contents/Developer/Toolchains/XcodeDefault.xctoolchain/usr/include"
+  "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/usr/include"
+)
+
+set(darwin_sierra_frameworks_dirs
+  "/Applications/Xcode.app/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/MacOSX10.12.sdk/System/Library/Frameworks"
 )
 
 if(APPLE)
   EXEC_PROGRAM(uname ARGS -r OUTPUT_VARIABLE DARWIN_VERSION)
   if (DARWIN_VERSION EQUAL "16.0.0")
     set(STDLIB_INCLUDE_DIRS ${darwin_sierra_include_dirs})
+    set(STDLIB_FRAMEWORKS_DIRS darwin_sierra_frameworks_dirs)
   endif()
   # TODO: add header locations for older Darwin OSes;
 elseif(UNIX)
