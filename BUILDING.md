@@ -17,12 +17,14 @@ Clang is through CMake, which is described [here](http://llvm.org/docs/CMake.htm
 
 1. Checkout and build LLVM/Clang
 2. Checkout the source and generate build files
+
   ```bash
   $ git clone https://github.com/samvv/binstruct
   $ mkdir -p build/Release && cd build/Release
   $ cmake ... -DCMAKE_INSTALL_PREFIX=/usr/local
   ```
 3. Compile and install
+
   ```bash
   $ make install
   ```
