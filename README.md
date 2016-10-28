@@ -7,6 +7,8 @@ C-style structures.
 Given the following code:
 
 ```c
+// ...
+
 #define EI_NIDENT 16
 
 typedef struct elf32_hdr{
