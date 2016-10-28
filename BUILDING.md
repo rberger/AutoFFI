@@ -37,7 +37,7 @@ Nightly packages of LLVM and Clang can be installed via the [official repository
 
 ### OS X
 
-OS X is shipped with LLVM and Clang, but is uses a custom version of the
+OS X is shipped with LLVM and Clang, but it uses a custom version of the
 software, which as far as we know isn't suitable for linking. Therefore, you
 will need to acquire "clean" version of LLVM. The easiest way to do so is via
 Homebrew, with `brew install llvm --with-clang --with-rtti`. However, chances
