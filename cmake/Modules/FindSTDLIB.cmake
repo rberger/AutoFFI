@@ -24,7 +24,7 @@ if(APPLE)
   EXEC_PROGRAM(uname ARGS -r OUTPUT_VARIABLE DARWIN_VERSION)
   if (DARWIN_VERSION EQUAL "16.0.0")
     set(STDLIB_INCLUDE_DIRS ${darwin_sierra_include_dirs})
-    set(STDLIB_FRAMEWORKS_DIRS darwin_sierra_frameworks_dirs)
+    set(STDLIB_FRAMEWORKS_DIRS ${darwin_sierra_frameworks_dirs})
   endif()
   # TODO: add header locations for older Darwin OSes;
 elseif(UNIX)
