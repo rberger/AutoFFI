@@ -1,0 +1,66 @@
+# Find Clang
+#
+# It defines the following variables
+# CLANG_FOUND        - True if Clang found.
+# CLANG_INCLUDE_DIRS - where to find Clang include files
+# CLANG_LIBRARIES         - list of clang libs
+
+if (NOT LLVM_INCLUDE_DIRS OR NOT LLVM_LIBRARY_DIRS)
+  message(FATAL_ERROR "No LLVM and Clang support requires LLVM")
+else (NOT LLVM_INCLUDE_DIRS OR NOT LLVM_LIBRARY_DIRS)
+
+MACRO(FIND_AND_ADD_CLANG_LIB _libname_)
+  find_library(CLANG_${_libname_}_LIB clang${_libname_} ${LLVM_LIBRARY_DIRS} NO_DEFAULT_PATH)
+if (CLANG_${_libname_}_LIB)
+   set(CLANG_LIBRARIES ${CLANG_LIBRARIES} ${CLANG_${_libname_}_LIB})
+endif (CLANG_${_libname_}_LIB)
+ENDMACRO(FIND_AND_ADD_CLANG_LIB)
+
+FIND_AND_ADD_CLANG_LIB(ARCMigrate)
+FIND_AND_ADD_CLANG_LIB(AST)
+FIND_AND_ADD_CLANG_LIB(ASTMatchers)
+FIND_AND_ADD_CLANG_LIB(Analysis)
+FIND_AND_ADD_CLANG_LIB(ApplyReplacements)
+FIND_AND_ADD_CLANG_LIB(Basic)
+FIND_AND_ADD_CLANG_LIB(CodeGen)
+FIND_AND_ADD_CLANG_LIB(Driver)
+FIND_AND_ADD_CLANG_LIB(DynamicASTMatchers)
+FIND_AND_ADD_CLANG_LIB(Edit)
+FIND_AND_ADD_CLANG_LIB(Format)
+FIND_AND_ADD_CLANG_LIB(Frontend)
+FIND_AND_ADD_CLANG_LIB(FrontendTool)
+FIND_AND_ADD_CLANG_LIB(Index)
+FIND_AND_ADD_CLANG_LIB(Lex)
+FIND_AND_ADD_CLANG_LIB(Parse)
+FIND_AND_ADD_CLANG_LIB(Query)
+FIND_AND_ADD_CLANG_LIB(Rename)
+FIND_AND_ADD_CLANG_LIB(Rewrite)
+FIND_AND_ADD_CLANG_LIB(RewriteFrontend)
+FIND_AND_ADD_CLANG_LIB(Sema)
+FIND_AND_ADD_CLANG_LIB(Serialization)
+FIND_AND_ADD_CLANG_LIB(StaticAnalyzerCheckers)
+FIND_AND_ADD_CLANG_LIB(StaticAnalyzerCore)
+FIND_AND_ADD_CLANG_LIB(StaticAnalyzerFrontend)
+FIND_AND_ADD_CLANG_LIB(Tidy)
+FIND_AND_ADD_CLANG_LIB(TidyCERTModule)
+FIND_AND_ADD_CLANG_LIB(TidyCppCoreGuidelinesModule)
+FIND_AND_ADD_CLANG_LIB(TidyGoogleModule)
+FIND_AND_ADD_CLANG_LIB(TidyLLVMModule)
+FIND_AND_ADD_CLANG_LIB(TidyMiscModule)
+FIND_AND_ADD_CLANG_LIB(TidyModernizeModule)
+FIND_AND_ADD_CLANG_LIB(TidyPerformanceModule)
+FIND_AND_ADD_CLANG_LIB(TidyPlugin)
+FIND_AND_ADD_CLANG_LIB(TidyReadabilityModule)
+FIND_AND_ADD_CLANG_LIB(TidyUtils)
+FIND_AND_ADD_CLANG_LIB(Tooling)
+FIND_AND_ADD_CLANG_LIB(ToolingCore)
+
+find_path(CLANG_INCLUDE_DIRS clang/Basic/Version.h HINTS ${LLVM_INCLUDE_DIRS})
+
+include(FindPackageHandleStandardArgs)
+find_package_handle_standard_args(Clang DEFAULT_MSG CLANG_LIBRARIES CLANG_INCLUDE_DIRS)
+
+mark_as_advanced(CLANG_INCLUDE_DIRS CLANG_LIBRARIES)
+
+endif (NOT LLVM_INCLUDE_DIRS OR NOT LLVM_LIBRARY_DIRS) 
+
