@@ -7,6 +7,8 @@ project(bstruct CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 
+#add_definitions(-stdlib=libc++)
+
 find_package(STDLIB)
 find_package(LLVM 4.0 REQUIRED CONFIG)
 find_package(CLANG REQUIRED)
@@ -34,16 +36,24 @@ endforeach()
 
 initializer_list(arg_list tool_default_args)
 
+include_directories(include/)
+
 #add_definitions("-DDEFAULT_ARGS=\"${tool-default_args}\"")
 configure_file(src/config.h.in "${CMAKE_SOURCE_DIR}/src/config.h")
-include_directories("${CMAKE_BINARY_DIR}/src")
 
 llvm_map_components_to_libnames(LLVM_LIBRARIES all)
 add_definitions(${LLVM_DEFINITIONS})
 
+add_library(bstructAST src/ast.cpp)
+add_library(bstructProto src/proto.cpp src/ast.pb.cc)
+add_library(bstructClang src/clang.cpp)
+add_library(bstruct src/null.cpp)
 add_executable(bsls src/list.cpp)
-target_link_libraries(bsls ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
-add_executable(bsgen src/generate.cpp)
+add_executable(bsgen src/json.cpp)
+target_link_libraries(bstructClang ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
+target_link_libraries(bstruct bstructAST bstructClang bstructProto)
+target_link_libraries(bsls bstruct)
+target_link_libraries(bsgen bstruct)
 
 install(TARGETS bsls bsgen RUNTIME DESTINATION bin)
 
