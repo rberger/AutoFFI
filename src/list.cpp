@@ -1,8 +1,11 @@
 
 #include <iostream>
 #include <sstream>
+#include <string.h>
+#include <vector>
 
 #include "config.h"
+#include "clang.h"
 
 #include "llvm/Support/raw_ostream.h"
 #include "clang/Tooling/Tooling.h"
@@ -13,6 +16,8 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/AST/TypeVisitor.h"
 #include "clang/AST/DeclVisitor.h"
+#include "llvm/Support/Path.h"
+#include "llvm/ADT/SmallVector.h"
 
 using namespace clang::tooling;
 using namespace clang::ast_matchers;
@@ -22,119 +27,22 @@ using namespace llvm;
 static cl::OptionCategory MyToolCategory("bstruct list options");
 static cl::opt<bool> ParseSystemHeaders("sys", cl::desc("Include system header types"), cl::cat(MyToolCategory));
 static cl::opt<bool> ParseIncludedHeaders("r", cl::desc("Parse included headers"), cl::cat(MyToolCategory));
-//static cl::list<std::string> Files(cl::Positional, cl::desc("List of headers to parse"), cl::OneOrMore, cl::cat(MyToolCategory));
-
-struct QualTypeLT {
-  bool operator()(const QualType& a, const QualType& b) {
-    return a.getTypePtr() < b.getTypePtr()
-      && a.getLocalFastQualifiers() < b.getLocalFastQualifiers();
-  }
-};
-
-DeclarationMatcher MyMatcher = anyOf(
-  typedefDecl().bind("ndecl"),
-  functionDecl().bind("ndecl"),
-  recordDecl().bind("ndecl"),
-  varDecl(isConstexpr()).bind("ndecl")
-);
-
-class TypeExtractor : public ConstDeclVisitor<TypeExtractor, const QualType> {
-public:
-  const QualType VisitTypeDecl(const TypeDecl* decl) {
-    return QualType(decl->getTypeForDecl(), 0);
-  }
-  const QualType VisitValueDecl(const ValueDecl* decl) {
-    return decl->getType();
-  }
-};
-
-class DependantTypesCollector : public TypeVisitor<DependantTypesCollector> {
-  std::set<const QualType, QualTypeLT> types;
-  TypeExtractor extractor;
-public:
-  void Visit(const QualType& type) {
-    types.emplace(type);
-  }
-  void Visit(const FunctionProtoType* type) {
-    Visit(type);
-    for (auto paramType: type->param_types())
-      Visit(paramType);
-    types.emplace(QualType(type, 0));
-  }
-};
-
-//struct DeclSourceLocFilter {
-  //SourceManager& sourceManager;
-  //DeclSourceLocFilter(SourceManager& mngr): sourceManager(mngr) {}
-  //bool operator()(Decl* decl) {
-    //FullSourceLoc fullSourceLoc(decl->getLocation(), sourceManager);
-    //return fullSourceLoc.isValid() && !fullSourceLoc.isInSystemHeader();
-  //}
-//};
-
-//class TypeDeclFinder : public TypeVisitor<TypeDeclFinder, Decl*> {
-//protected:
-//public:
-  //Decl* VisitTagType(const TagType* t) {
-    //return t->getDecl();
-  //}
-  //Decl* VisitTypedefType(const TypedefType* t) {
-    //return t->getDecl();
-  //}
-  //Decl* VisitFunctionType(const FunctionType* t) {
-
-  //}
-  
-//};
-
-class NameCollector : public MatchFinder::MatchCallback {
-public:
-  std::set<const NamedDecl*> decls;
-  NameCollector(std::vector<std::string> headers) {}
-
-  bool isLocationValid(const FullSourceLoc& loc) {
-    return loc.isValid() && !loc.isInSystemHeader();
-  }
-
-  void run(const MatchFinder::MatchResult &Result) override {
-    auto& sourceManager(Result.Context->getSourceManager());
-    const NamedDecl* decl = Result.Nodes.getNodeAs<NamedDecl>("ndecl");
-    if (decl && !decl->isImplicit()) {
-      FullSourceLoc fullSourceLoc(decl->getLocation(), sourceManager);
-      if (isLocationValid(fullSourceLoc)) {
-        decls.emplace(decl);
-      }
-    }
-  }
-};
+static cl::list<std::string> Files(cl::Positional, cl::desc("Files to parse"), cl::OneOrMore);
+//cl::list<const char*>  CompilerArgList(cl::ConsumeAfter, cl::desc("<compiler arguments> ..."));
 
 int main(int argc, const char* argv[]) {
-  static std::vector<const char*> defaultArgs DEFAULT_ARGS_INITIALIZER;
-  std::vector<const char*> args(argv, argv+argc);
-  std::copy(defaultArgs.begin(), defaultArgs.end(), std::back_inserter(args));
-  //std::find(args.begin(), args.end(), "--");
 
-  int newArgc(args.size());
-  CommonOptionsParser op(newArgc, args.data(), MyToolCategory);
-  auto& db(op.getCompilations());
-  auto headers(op.getSourcePathList());
-  ClangTool tool(db, headers);
+  auto sep(std::find_if(argv, argv+argc, [](const char* arg) {
+    return !strcmp(arg, "--");
+  }));
 
-  NameCollector nameCollector(headers);
-  MatchFinder Finder;
-  Finder.addMatcher(MyMatcher, &nameCollector);
+  std::vector<const char*> compilerArgs(sep == argv+argc ? sep : sep+1, argv+argc);
 
-  if (const int res = tool.run(newFrontendActionFactory(&Finder).get())) {
-    //llvm::errs() << "type analyser failed to run properly\n";
-    std::cerr << "bstruct was unable to analyse source file" << std::endl;
-    return res;
-  }
+  cl::ParseCommandLineOptions(sep-argv, argv);
+  ScanOperation op;
+  op.scan(Files, compilerArgs);
 
-  DependantTypesCollector depColl;
-  TypeExtractor e;
-
-  for (auto decl: nameCollector.decls) {
-    depColl.Visit(e.Visit(decl));
+  for (auto decl: op.getDecls()) {
     std::cout << decl->getNameAsString() << std::endl;
   }
 
