@@ -1,0 +1,67 @@
+syntax = "proto3";
+
+/** Types */
+
+message Type {
+
+  bool isConst = 1;
+  bool isVolatile = 2;
+
+  enum TypeKind {
+    PRIMITIVE = 0;
+    POINTER = 1;
+    FUNCTION = 2;
+    FIXED_ARRAY = 5;
+    VARDIAC_ARRAY = 6;
+  }
+
+  TypeKind kind = 3;
+}
+
+message ArrayType {
+  int32 size = 1;
+  Type elementType = 2;
+}
+
+message PtrType {
+  Type underlyingType = 1;
+}
+
+message RecordField {
+  string name = 1;
+  Type type = 2;
+};
+
+message EnumValue {
+  string name = 1;
+  int32 value = 2;
+};
+
+/** Values */
+
+message Value {
+  enum Type {
+    FUNCTION = 0;
+    PRIMITIVE = 1;
+    STRUCT = 2;
+    ENUM = 3;
+  }
+  Type type = 1;
+};
+
+message FunctionValue {
+  string mangledName = 1;
+};
+
+message PrimitiveValue {
+  bytes value = 1;
+};
+
+/** Exports */ 
+
+message Export {
+  string name = 1;
+  Type type = 2;
+  Value value = 3;
+}
+
