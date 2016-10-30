@@ -15,6 +15,7 @@ The following is an example of a program that can be parsed by Truss:
 ```c
 
 // Example taken from Chipmunk2D physics library
+// https://github.com/slembcke/Chipmunk2D
 
 // ...
 
