@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
-project(Truss CXX)
+project(Transit CXX)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -14,6 +14,7 @@ find_package(LLVM 4.0 REQUIRED CONFIG)
 find_package(CLANG REQUIRED)
 
 add_subdirectory(vendor/protobuf/cmake)
+add_subdirectory(vendor/googletest/googletest)
 
 function(initializer_list lst var)
   set(acc "{")
@@ -46,17 +47,21 @@ configure_file(src/config.h.in "${CMAKE_SOURCE_DIR}/src/config.h")
 llvm_map_components_to_libnames(LLVM_LIBRARIES all)
 add_definitions(${LLVM_DEFINITIONS})
 
-add_library(trussAST src/ast.cpp)
-add_library(trussProto src/proto.cpp src/ast.pb.cc)
-add_library(trussClang src/clang.cpp)
-add_library(truss src/null.cpp)
-#add_executable(tls src/list.cpp)
+add_library(transitAST src/ast.cpp)
+add_library(transitProto src/proto.cpp src/ast.pb.cc)
+add_library(transitClang src/clang.cpp)
+add_library(transit src/null.cpp)
+add_executable(tls src/list.cpp)
 add_executable(tgen src/proto.cpp)
-target_link_libraries(trussClang ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
-target_link_libraries(trussProto protobuf)
-target_link_libraries(truss trussAST trussClang trussProto)
-#target_link_libraries(tls truss)
-target_link_libraries(tgen truss)
+target_link_libraries(transitClang ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
+target_link_libraries(transitProto protobuf)
+target_link_libraries(transit transitAST transitClang transitProto)
+target_link_libraries(tls transit)
+target_link_libraries(tgen transit)
+
+file(GLOB TEST_FILES test/*.cpp)
+add_executable(transitTests ${TEST_FILES})
+target_link_libraries(transitTests transit gtest gtest_main)
 
 install(TARGETS tgen RUNTIME DESTINATION bin)
 

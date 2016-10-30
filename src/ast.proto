@@ -1,6 +1,7 @@
 syntax = "proto3";
+option cc_enable_arenas = true;
 
-package truss.proto;
+package transit.proto;
 
 /** Types */
 
@@ -9,18 +10,22 @@ message Type {
   bool isConst = 1;
   bool isVolatile = 2;
 
-  enum TypeKind {
-    PRIMITIVE = 0;
-    POINTER = 1;
-    FUNCTION = 2;
-    FIXED_ARRAY = 5;
-    VARDIAC_ARRAY = 6;
+  enum Kind {
+    PRIMITIVE     = 0;
+    POINTER       = 1;
+    FUNCTION      = 2;
+    ENUM          = 3;
+    STRUCT        = 4;
+    UNION         = 5;
+    FIXED_ARRAY   = 6;
+    VARDIAC_ARRAY = 7;
+    QUALIFIED     = 8;
   }
 
-  TypeKind kind = 3;
+  Kind kind = 3;
 }
 
-message ArrayType {
+message FixedArrayType {
   int32 size = 1;
   Type elementType = 2;
 }

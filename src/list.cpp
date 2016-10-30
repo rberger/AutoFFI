@@ -5,23 +5,11 @@
 #include <vector>
 
 #include "config.h"
-#include "clang.h"
+#include "Transit/Analyser.h"
 
-#include "llvm/Support/raw_ostream.h"
-#include "clang/Tooling/Tooling.h"
-#include "clang/Frontend/FrontendAction.h"
-#include "clang/Tooling/CommonOptionsParser.h"
+//#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"
-#include "clang/ASTMatchers/ASTMatchers.h"
-#include "clang/ASTMatchers/ASTMatchFinder.h"
-#include "clang/AST/TypeVisitor.h"
-#include "clang/AST/DeclVisitor.h"
-#include "llvm/Support/Path.h"
-#include "llvm/ADT/SmallVector.h"
 
-using namespace clang::tooling;
-using namespace clang::ast_matchers;
-using namespace clang;
 using namespace llvm;
 
 static cl::OptionCategory MyToolCategory("bstruct list options");
@@ -39,12 +27,14 @@ int main(int argc, const char* argv[]) {
   std::vector<const char*> compilerArgs(sep == argv+argc ? sep : sep+1, argv+argc);
 
   cl::ParseCommandLineOptions(sep-argv, argv);
-  ScanOperation op;
-  op.scan(Files, compilerArgs);
+  transit::Analyser a;
+  if (int res = a.scan(Files, compilerArgs))
+    return res;
 
-  for (auto decl: op.getDecls()) {
-    std::cout << decl->getNameAsString() << std::endl;
+  for (auto ex: a.getExports()) {
+    std::cout << ex->name << std::endl;
   }
 
+  return 0;
 }
 
