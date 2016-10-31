@@ -21,33 +21,47 @@ struct Contact {
 };
 ```
 
-```json
-{
-  "types": [
-    { "id": 1, "kind": "qualified", "qualifiers": ["const"], "underlyingType": 2 },
-    { "id": 1, "kind": "pointer", "referencedType": "3" },
-    { "id": 3, "kind": "primitive", "value": "char" }
-    { "id": 4, "kind": "struct",
-      "fields": {
-        "name": 1,
-        "workPhone": 1,
-        "homePhone": 1, 
-        "mobilePhone": 1
-      }
+```hocon
+types [
+  1 {
+    kind: "qualified"
+    qualifiers: ["const"]
+    underlyingType: 2
+  }
+  2 {
+    kind: "pointer"
+    referencedType: "3"
+  }
+  3 {
+    kind: "primitive"
+    value": "char"
+  }
+  4 { 
+    kind: "struct",
+    fields {
+      name: 1,
+      workPhone: 1,
+      homePhone: 1, 
+      mobilePhone: 1
     }
-  ],
-  "exports": [
-    { "name": "PhoneNum", "type": 1 }
-    { "name": "Contact", "type": 4 }
-  ]
-}
+  }
+]
+
+exports [
+  PhoneNum {
+    type: 1
+  }
+  Contact {
+    type: 4
+  }
+]
 ```
 
 ## Software using Transit
 
-Transit doesn't do anything interesting out-of-the-box but extract essential
-information from your source code. In order to harness its full power, you will
-need to use one of the libraries which consume the Transit AST.
+Transit doesn't do anything interesting out-of-the-box except for extracting
+essential information from your source code. In order to harness its full
+power, you will need to use one of the libraries which consume the Transit AST.
 
  - [bstruct](http://github.com/samvv/binstruct): tools for data serialization and deserialization
  - [AutoFFI](http://github.com/samvv/AutoFFI): tools for automagically connecting to a foreign ABI
