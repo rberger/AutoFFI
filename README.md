@@ -8,7 +8,7 @@ information from source code which is essential for communication between
 different programs, most importantly between C/C++ programs and scripting
 languages.
 
-The following is an example of a C-style specification which gets converted to a Tansit JSON file;:
+The following is an example of a C-style specification which gets converted to a Tansit JSON file:
 
 ```c
 typedef cons char* PhoneNum;
@@ -36,10 +36,10 @@ struct Contact {
       }
     }
   ],
-  "exports": [{
+  "exports": [
     { "name": "PhoneNum", "type": 1 }
     { "name": "Contact", "type": 4 }
-  }]
+  ]
 }
 ```
 
