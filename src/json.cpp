@@ -11,7 +11,7 @@ using namespace llvm;
 #define JOIN(values, value, ops) { \
 	bool first = true; \
 	for (auto value: values) { \
-		if (first)first = false; \
+		if (first) first = false; \
 		else std::cout << ","; \
 		ops; \
 	}; }
@@ -82,7 +82,8 @@ struct TypeSerializer : public TypeVisitor<TypeSerializer> {
   TypeSerializer(Indexer<const Type*>& index): index(index) {}
 
   void visitType(const Type* type) {
-    std::cout << "warning: type not converted" << type->getKind() << std::endl;
+    throw std::runtime_error("unvisited type");
+    std::cerr << "warning: type not converted" << type->getKind() << std::endl;
   }
 
   void visitFixedArrayType(const FixedArrayType* type) {
@@ -93,12 +94,13 @@ struct TypeSerializer : public TypeVisitor<TypeSerializer> {
   }
 
   void visitVariadicArrayType(const VariadicArrayType* type) {
-    std::cout << "{\"kind\":\"array\",\"id\":" << index.getID(type) << ",\"elementType\":" << index.getID(type->elementType) << "}";
+    std::cout << "{\"kind\":\"array\",\"id\":" << index.getID(type)
+              << ",\"elementType\":" << index.getID(type->elementType) << "}";
   }
 
   void visitFunctionType(const FunctionType* type) {
     std::cout << "{\"kind\":\"function\",\"id\":" << index.getID(type) << ",\"paramTypes\":[";
-    JOIN(type->paramTypes, paramType, index.getID(paramType));
+    JOIN(type->paramTypes, paramType, std::cout << index.getID(paramType));
     std::cout << "],\"returnType\":" << index.getID(type->returnType) << "}";
   }
 
@@ -173,10 +175,10 @@ int main(int argc, const char* argv[]) {
   transit::Indexer<const transit::Type*> typeIndex(a.getTypes());
 
   // serialize to JSON
-	std::cout << "{\"types\":[";
-	JOIN(a.getTypes(), type, serialize(type, typeIndex));
-  std::cout << "],\"exports\":[";
+  std::cout << "{\"exports\":[";
 	JOIN(a.getExports(), ex, serialize(ex, typeIndex));
+	std::cout << "],\"types\":[";
+	JOIN(a.getTypes(), type, serialize(type, typeIndex));
   std::cout << "]}";
 }
 

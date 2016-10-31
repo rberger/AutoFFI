@@ -65,5 +65,5 @@ file(GLOB TEST_FILES test/*.cpp)
 add_executable(transitTests ${TEST_FILES})
 target_link_libraries(transitTests transit gtest gtest_main)
 
-install(TARGETS tgen RUNTIME DESTINATION bin)
+install(TARGETS tjson tgen RUNTIME DESTINATION bin)
 

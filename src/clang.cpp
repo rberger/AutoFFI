@@ -47,7 +47,7 @@ DeclarationMatcher MyMatcher = anyOf(
 struct ClangQualTypeLT {
   bool operator()(const clang::QualType& a, const clang::QualType& b) const {
     return a.getTypePtr() < b.getTypePtr()
-      || a.getLocalFastQualifiers() < b.getLocalFastQualifiers();
+			|| ((a.getTypePtr() == b.getTypePtr()) && a.getLocalFastQualifiers() < b.getLocalFastQualifiers());
   } 
 };
 
@@ -122,12 +122,15 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
   transit::Type* VisitType(const clang::Type* type) {
     std::cerr << "warning: could not process the following type:" << std::endl;
     type->dump();
-    return NULL; // FIXME: I am not handled properly
+    throw std::runtime_error("unconvertable type");
   }
 
   transit::Type* VisitTypedefType(const TypedefType* type) {
     // Skip typedefs which are not captured as an export
-    return VisitQualType(type->desugar());
+    auto converted(VisitQualType(type->desugar()));
+    // NOTE: I do not have to be added to the map
+    //types.emplace(clang::QualType(type, 0), converted);
+    return converted;
   }
 
   transit::Type* VisitConstantArrayType(const clang::ConstantArrayType* type) {
@@ -162,14 +165,11 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
   }
 
   transit::Type* VisitQualType(const clang::QualType& qt) {
-    if (qt.isNull()) // only allow complete types
-      //return NULL; // FIXME: I am not handled properly
-      throw std::runtime_error("cuu coo");
     auto match(types.find(qt));
     if (match != types.end())
       return match->second;
     // Skip creation of qualified types where no qualifiers are present
-    if (qt.hasQualifiers()) {
+    if (qt.hasLocalQualifiers()) {
       auto converted = new transit::QualType;
       converted->underlyingType = Visit(qt.getTypePtr());
       converted->setConst(qt.isConstQualified());
@@ -177,18 +177,27 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
       types.emplace(qt, converted);
       return converted;
     } else {
-      return Visit(qt.getTypePtr());
+      auto converted = Visit(qt.getTypePtr());
+      // NOTE: I do not have to be added to the map
+      types.emplace(qt, converted);
+      return converted;
     }
   }
 
   transit::Type* VisitElaboratedType(const clang::ElaboratedType* type) {
     // Elaborated types are ignored by the AST; their referenced type is used
-    return VisitQualType(type->getNamedType());
+    auto converted = VisitQualType(type->getNamedType());
+    // NOTE: I do not have to be added to the map
+    //types.emplace(clang::QualType(type, 0), converted);
+    return converted;
   }
 
   transit::Type* VisitParenType(const clang::ParenType* type) {
     // Parenhesed types are expanded
-    return VisitQualType(type->desugar());
+    auto converted = VisitQualType(type->desugar());
+    // NOTE: I do not have to be added to the map
+    //types.emplace(clang::QualType(type, 0), converted);
+    return converted;
   }
 
   transit::Type* VisitEnumType(const clang::EnumType* type) {
@@ -240,6 +249,16 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     return converted;
   }
 
+	transit::Type* VisitFunctionNoProtoType(const FunctionNoProtoType* type) {
+    auto match(types.find(clang::QualType(type, 0)));
+    if (match != types.end())
+      return match->second;
+    auto converted = new transit::FunctionType;
+    converted->returnType = VisitQualType(type->getReturnType());
+    types.emplace(clang::QualType(type, 0), converted);
+    return converted;
+	};
+
   transit::Type* VisitFunctionProtoType(const FunctionProtoType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
@@ -266,14 +285,6 @@ struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, transit:
   TypeConverter typeConverter;
   ValueConverter valueConverter;
 
-  transit::Export* VisitEnumDecl(const EnumDecl* decl) {
-    auto e = new transit::Export;
-    e->name = decl->getNameAsString();
-    e->type = typeConverter.Visit(decl->getTypeForDecl());
-    e->value = NULL;
-    return e;
-  }
-
   transit::Export* VisitTypedefDecl(const TypedefDecl* decl) {
     auto e = new transit::Export;
     e->name = decl->getNameAsString();
@@ -299,6 +310,14 @@ struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, transit:
   }
 
   transit::Export* VisitRecordDecl(const RecordDecl* decl) {
+    auto e = new transit::Export;
+    e->name = decl->getNameAsString();
+    e->type = typeConverter.Visit(decl->getTypeForDecl());
+    e->value = NULL;
+    return e;
+  }
+
+  transit::Export* VisitEnumDecl(const EnumDecl* decl) {
     auto e = new transit::Export;
     e->name = decl->getNameAsString();
     e->type = typeConverter.Visit(decl->getTypeForDecl());

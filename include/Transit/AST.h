@@ -252,9 +252,9 @@ struct TypeVisitor {
     case Type::ENUM:
       return static_cast<Derived*>(this)->visitEnumType(static_cast<const EnumType*>(type));
     case Type::UNION:
-      return static_cast<Derived*>(this)->visitRecordType(static_cast<const UnionType*>(type));
+      return static_cast<Derived*>(this)->visitUnionType(static_cast<const UnionType*>(type));
     case Type::STRUCT:
-      return static_cast<Derived*>(this)->visitRecordType(static_cast<const StructType*>(type));
+      return static_cast<Derived*>(this)->visitStructType(static_cast<const StructType*>(type));
     case Type::POINTER:
       return static_cast<Derived*>(this)->visitPointerType(static_cast<const PointerType*>(type));
     case Type::FUNCTION:
@@ -275,6 +275,8 @@ struct TypeVisitor {
   R visitRecordType(const RecordType* type) { return visitType(type); }
   R visitPointerType(const PointerType* type) { return visitType(type); }
   R visitFunctionType(const FunctionType* type) { return visitType(type); }
+  R visitUnionType(const RecordType* type) { return visitRecordType(type); }
+  R visitStructType(const RecordType* type) { return visitRecordType(type); }
   R visitPrimitiveType(const PrimitiveType* type) { return visitType(type); }
   R visitFixedArrayType(const FixedArrayType* type) { return visitArrayType(type); }
   R visitVariadicArrayType(const VariadicArrayType* type) { return visitArrayType(type); }
