@@ -8,55 +8,6 @@ information from source code which is essential for communication between
 different programs, most importantly between C/C++ programs and scripting
 languages.
 
-The following is an example of a C-style specification which gets converted to a Tansit JSON file:
-
-```c
-typedef cons char* PhoneNum;
-
-struct Contact {
-  const char* name;
-  PhoneNum workPhone;
-  PhoneNum homePhone;
-  PhoneNum mobilePhone;
-};
-```
-
-```hocon
-types [
-  1 {
-    kind: "qualified"
-    qualifiers: ["const"]
-    underlyingType: 2
-  }
-  2 {
-    kind: "pointer"
-    referencedType: "3"
-  }
-  3 {
-    kind: "primitive"
-    value": "char"
-  }
-  4 { 
-    kind: "struct",
-    fields {
-      name: 1,
-      workPhone: 1,
-      homePhone: 1, 
-      mobilePhone: 1
-    }
-  }
-]
-
-exports [
-  PhoneNum {
-    type: 1
-  }
-  Contact {
-    type: 4
-  }
-]
-```
-
 ## Software using Transit
 
 Transit doesn't do anything interesting out-of-the-box except for extracting
