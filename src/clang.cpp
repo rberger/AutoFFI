@@ -1,5 +1,6 @@
 
 #include <iostream> // for debugging only
+#include <sstream>
 
 #include "config.h"
 #include "Transit/AST.h"
@@ -28,150 +29,237 @@
 #include "boost/range/adaptor/map.hpp"
 //#include "boost/iterator/filter_iterator.hpp"
 
+using namespace transit;
 using namespace clang;
 using namespace clang::tooling;
 using namespace clang::ast_matchers;
 
 DeclarationMatcher MyMatcher = anyOf(
   typedefDecl().bind("ndecl"),
+  typeAliasDecl().bind("ndecl"),
+  //typedefDecl().bind("ndecl"),
   functionDecl().bind("ndecl"),
   recordDecl().bind("ndecl"),
   enumDecl().bind("ndecl"),
   varDecl(isConstexpr()).bind("ndecl")
 );
 
-struct QualTypeLT {
-  bool operator()(const QualType& a, const QualType& b) const {
+struct ClangQualTypeLT {
+  bool operator()(const clang::QualType& a, const clang::QualType& b) const {
     return a.getTypePtr() < b.getTypePtr()
       || a.getLocalFastQualifiers() < b.getLocalFastQualifiers();
   } 
 };
 
-const QualType getTypeForNamedDecl(const NamedDecl* decl) {
-  static class DeclTypeExtractor : public ConstDeclVisitor<DeclTypeExtractor, const QualType> {
-  public:
-    const QualType VisitTypeDecl(const TypeDecl* decl) {
-      return QualType(decl->getTypeForDecl(), 0);
-    }
-    const QualType VisitValueDecl(const ValueDecl* decl) {
-      return decl->getType();
-    }
-    const QualType VisitNamedDecl(const NamedDecl* decl) {
-      throw std::runtime_error("could not convert types");
-    }
-  } declTypeExtractor;
-  return declTypeExtractor.Visit(decl);
+PrimitiveKind clangBuiltinTypeKindToTransitPrimitiveKind(const BuiltinType* type) {
+  switch (type->getKind()) {
+  case BuiltinType::Bool:
+    return PrimitiveKind::Bool;
+  case BuiltinType::Char_U:
+    return PrimitiveKind::Char_U;
+  case BuiltinType::UChar:
+    return PrimitiveKind::UChar;
+  case BuiltinType::WChar_U:
+    return PrimitiveKind::WChar_U;
+  case BuiltinType::Char16:
+    return PrimitiveKind::Char16;
+  case BuiltinType::Char32:
+    return PrimitiveKind::Char32;
+  case BuiltinType::UShort:
+    return PrimitiveKind::UShort;
+  case BuiltinType::UInt:
+    return PrimitiveKind::UInt;
+  case BuiltinType::ULong:
+    return PrimitiveKind::ULong;
+  case BuiltinType::ULongLong:
+    return PrimitiveKind::ULongLong;
+  case BuiltinType::UInt128:
+    return PrimitiveKind::UInt128;
+  case BuiltinType::Char_S:
+    return PrimitiveKind::Char_S;
+  case BuiltinType::SChar:
+    return PrimitiveKind::SChar;
+  case BuiltinType::WChar_S:
+    return PrimitiveKind::WChar_S;
+  case BuiltinType::Short:
+    return PrimitiveKind::Short;
+  case BuiltinType::Int:
+    return PrimitiveKind::Int;
+  case BuiltinType::Long:
+    return PrimitiveKind::Long;
+  case BuiltinType::LongLong:
+    return PrimitiveKind::LongLong;
+  case BuiltinType::Int128:
+    return PrimitiveKind::Int128;
+  case BuiltinType::Half:
+    return PrimitiveKind::Half;
+  case BuiltinType::Float:
+    return PrimitiveKind::Float;
+  case BuiltinType::Double:
+    return PrimitiveKind::Double;
+  case BuiltinType::LongDouble:
+    return PrimitiveKind::LongDouble;
+  case BuiltinType::NullPtr:
+    return PrimitiveKind::NullPtr;
+  case BuiltinType::Void:
+    return PrimitiveKind::Void;
+  default: {
+    LangOptions lopts;
+    PrintingPolicy popts(lopts);
+    throw std::runtime_error("encountered an unsupported primitive type: " + std::string(type->getNameAsCString(popts)));
+
+  }
+  }
 }
 
-//using NamedDeclSet = std::set<const NamedDecl*>;
-//using TypeSet = std::set<const QualType, QualTypeLT>;
-
-//class TypesCollector : public TypeVisitor<TypesCollector> {
-//protected:
-  //TypeSet types;
-//public:
-  //TypeSet& getTypes() { return types; };
-  //inline void add(const QualType& q) { types.emplace(q); };
-  //void VisitType(const Type* type);
-  //void VisitBuiltinType(const BuiltinType* type);
-  //void VisitQualType(const QualType& type);
-  //void VisitTypedefType(const TypedefType* type);
-  //void VisitFunctionProtoType(const FunctionProtoType* type);
-  //void VisitRecordType(const RecordType* type);
-//};
-
-//void TypesCollector::VisitBuiltinType(const BuiltinType* type) {
-  //add(QualType(type, 0));
-//}
-
-//void TypesCollector::VisitQualType(const QualType& type) {
-  //add(type);
-  //if (!type.isNull())
-    //Visit(type.getTypePtr());
-//}
-
-//void TypesCollector::VisitTypedefType(const TypedefType* type) {
-  //VisitQualType(type->desugar());
-//}
-
-//void TypesCollector::VisitType(const Type* type) {
-  //std::cerr << "skipping the following type:" << std::endl;
-  //type->dump();
-//}
-
-//void TypesCollector::VisitRecordType(const RecordType* type) {
-  //add(QualType(type, 0));
-  //for (auto field: type->getDecl()->fields()) {
-    //VisitQualType(field->getType());
-  //}
-//}
-
-//void TypesCollector::VisitFunctionProtoType(const FunctionProtoType* type) {
-  //add(QualType(type, 0));
-  //for (auto paramType: type->param_types())
-    //VisitQualType(paramType);
-//}
-
 /**
- * Converts an arbitrary Clang type to a Truss type.
+ * Converts an arbitrary Clang type to a Transit type.
  */
 struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> {
 
-  std::map<const QualType, transit::Type*, QualTypeLT> types;
+  std::map<const clang::QualType, transit::Type*, ClangQualTypeLT> types;
 
-  transit::Type* VisitQualType(const QualType& qt) {
-    if (qt.isNull()) // only allow complete types
-      return NULL;
-    auto match(types.find(qt));
+  transit::Type* VisitType(const clang::Type* type) {
+    std::cerr << "warning: could not process the following type:" << std::endl;
+    type->dump();
+    return NULL; // FIXME: I am not handled properly
+  }
+
+  transit::Type* VisitTypedefType(const TypedefType* type) {
+    // Skip typedefs which are not captured as an export
+    return VisitQualType(type->desugar());
+  }
+
+  transit::Type* VisitConstantArrayType(const clang::ConstantArrayType* type) {
+    auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
-    auto converted = new transit::QualType(Visit(qt.getTypePtr()));
-    converted->setConst(qt.isConstQualified());
-    converted->setVolatile(qt.isVolatileQualified());
-    types.emplace(qt, converted);
+    auto converted(new transit::FixedArrayType);
+    converted->count = type->getSize().getLimitedValue();
+    converted->elementType = VisitQualType(type->getElementType());
+    types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
 
-  transit::Type* VisitEnumType(const EnumType* type) {
-    auto match(types.find(QualType(type, 0)));
+  transit::Type* VisitPointerType(const clang::PointerType* type) {
+    auto match(types.find(clang::QualType(type, 0)));
+    if (match != types.end())
+      return match->second;
+    auto converted(new transit::PointerType);
+    converted->referencedType = VisitQualType(type->getPointeeType());
+    types.emplace(clang::QualType(type, 0), converted);
+    return converted;
+  }
+
+  transit::Type* VisitBuiltinType(const BuiltinType* type) {
+    auto match(types.find(clang::QualType(type, 0)));
+    if (match != types.end())
+      return match->second;
+    auto converted(new PrimitiveType);
+    converted->primitiveKind = clangBuiltinTypeKindToTransitPrimitiveKind(type);
+    types.emplace(clang::QualType(type, 0), converted);
+    return converted;
+  }
+
+  transit::Type* VisitQualType(const clang::QualType& qt) {
+    if (qt.isNull()) // only allow complete types
+      //return NULL; // FIXME: I am not handled properly
+      throw std::runtime_error("cuu coo");
+    auto match(types.find(qt));
+    if (match != types.end())
+      return match->second;
+    // Skip creation of qualified types where no qualifiers are present
+    if (qt.hasQualifiers()) {
+      auto converted = new transit::QualType;
+      converted->underlyingType = Visit(qt.getTypePtr());
+      converted->setConst(qt.isConstQualified());
+      converted->setVolatile(qt.isVolatileQualified());
+      types.emplace(qt, converted);
+      return converted;
+    } else {
+      return Visit(qt.getTypePtr());
+    }
+  }
+
+  transit::Type* VisitElaboratedType(const clang::ElaboratedType* type) {
+    // Elaborated types are ignored by the AST; their referenced type is used
+    return VisitQualType(type->getNamedType());
+  }
+
+  transit::Type* VisitParenType(const clang::ParenType* type) {
+    // Parenhesed types are expanded
+    return VisitQualType(type->desugar());
+  }
+
+  transit::Type* VisitEnumType(const clang::EnumType* type) {
+    auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto decl(type->getDecl());
     auto converted = new transit::EnumType;
     for (auto value: decl->enumerators())
       converted->addValue(value->getNameAsString(), value->getInitVal().getLimitedValue());
-    types.emplace(QualType(type, 0), converted);
+    types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
 
   transit::Type* VisitRecordType(const clang::RecordType* type) {
-    auto match(types.find(QualType(type, 0)));
+    auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto decl(type->getDecl());
-    auto converted = new transit::RecordType;
+    transit::RecordType* converted;
+    switch (decl->getTagKind()) {
+    case TTK_Struct:
+    case TTK_Class:
+      converted = new transit::StructType;
+      break;
+    case TTK_Union:
+      converted = new transit::UnionType;
+      break;
+    default:
+      std::cerr << "unrecognised record type" << std::endl;
+      decl->dump();
+      throw std::runtime_error("cuu coo");
+      return NULL; // FIXME: I am not properly handled
+    }
     for (auto field: decl->fields())
       converted->addField(field->getNameAsString(), VisitQualType(field->getType()));
-    types.emplace(QualType(type, 0), converted);
+    types.emplace(clang::QualType(type, 0), converted);
+    return converted;
+  }
+
+  transit::Type* VisitBlockPointerType(const BlockPointerType* type) {
+    auto match(types.find(clang::QualType(type, 0)));
+    if (match != types.end())
+      return match->second;
+    auto converted = new transit::PointerType;
+    converted->isBlockPtr = true;
+    converted->referencedType = VisitQualType(type->getPointeeType());
+    types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
 
   transit::Type* VisitFunctionProtoType(const FunctionProtoType* type) {
-    auto match(types.find(QualType(type, 0)));
+    auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto converted = new transit::FunctionType;
-    // TODO: implement me
-    types.emplace(QualType(type, 0), converted);
+    for (auto paramType: type->param_types())
+      converted->addParamType(VisitQualType(paramType));
+    converted->returnType = VisitQualType(type->getReturnType());
+    types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
 
 };
 
-struct ValueConverter {};
+struct ValueConverter {
+
+};
 
 /**
- * Converts a named declaration to a Truss symbol export.
+ * Converts a named declaration to a Transit symbol export.
  */
 struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, transit::Export*> {
 
@@ -186,16 +274,11 @@ struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, transit:
     return e;
   }
 
-  // TODO: remove me?
-  transit::Export* VisitDecl(const Decl* decl) {
-    decl->dump();
-    throw std::runtime_error("ran into a declaration that should not be matched");
-  };
-
-  transit::Export* VisitDecl(const TypedefDecl* decl) {
+  transit::Export* VisitTypedefDecl(const TypedefDecl* decl) {
     auto e = new transit::Export;
     e->name = decl->getNameAsString();
-    e->type = typeConverter.Visit(decl->getTypeForDecl());
+    e->type = typeConverter.VisitQualType(decl->getUnderlyingType());
+    e->value = NULL;
     return e;
   }
 
@@ -203,6 +286,7 @@ struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, transit:
     auto e = new transit::Export;
     e->name = decl->getNameAsString();
     e->type = typeConverter.VisitQualType(decl->getType());
+    e->value = NULL;
     return e;
   };
 
@@ -217,7 +301,8 @@ struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, transit:
   transit::Export* VisitRecordDecl(const RecordDecl* decl) {
     auto e = new transit::Export;
     e->name = decl->getNameAsString();
-    e->type = typeConverter.VisitType(decl->getTypeForDecl());
+    e->type = typeConverter.Visit(decl->getTypeForDecl());
+    e->value = NULL;
     return e;
   }
 
@@ -248,8 +333,7 @@ public:
     auto& sourceManager(Result.Context->getSourceManager());
     const NamedDecl* decl = Result.Nodes.getNodeAs<NamedDecl>("ndecl");
     if (decl) { 
-      auto type(getTypeForNamedDecl(decl));
-      if (!type.isNull() && !decl->isImplicit()) {
+      if (!decl->isImplicit()) {
         FullSourceLoc fullSourceLoc(decl->getLocation(), sourceManager);
         if (isLocationValid(fullSourceLoc)) {
           decls.emplace(decl);
@@ -287,12 +371,13 @@ int transit::Analyser::scan(std::vector<std::string> headers, std::vector<const 
   Finder.addMatcher(MyMatcher, &nameCollector);
   int res(tool.run(newFrontendActionFactory(&Finder).get()));
 
-  // convert them to our local AST
+  // convert them to our local AST and insert them into the analyser
   NamedDeclConverter declConverter;
   for (auto decl: decls) {
     exports.insert(declConverter.Visit(decl));
   }
-  // and insert them into the analyser
+  // as a side-effect of the transformation, all types were converted
+  // insert them too
   boost::copy(declConverter.typeConverter.types | boost::adaptors::map_values, std::inserter(types, types.end()));
 
   // clean up some things we don't need anymore
