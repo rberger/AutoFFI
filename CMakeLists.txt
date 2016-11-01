@@ -13,9 +13,6 @@ find_package(STDLIB)
 find_package(LLVM 4.0 REQUIRED CONFIG)
 find_package(CLANG REQUIRED)
 
-add_subdirectory(vendor/protobuf/cmake)
-add_subdirectory(vendor/googletest/googletest)
-
 function(initializer_list lst var)
   set(acc "{")
   set(first true)
@@ -39,31 +36,24 @@ endforeach()
 
 initializer_list(arg_list tool_default_args)
 
-include_directories(include/)
-
 #add_definitions("-DDEFAULT_ARGS=\"${tool-default_args}\"")
 configure_file(src/config.h.in "${CMAKE_SOURCE_DIR}/src/config.h")
+
+include_directories(include/)
+
+add_subdirectory(vendor/transit/)
 
 llvm_map_components_to_libnames(LLVM_LIBRARIES all)
 add_definitions(${LLVM_DEFINITIONS})
 
-add_library(transitAST src/ast.cpp)
-add_library(transitProto src/proto.cpp src/ast.pb.cc)
 add_library(transitClang src/clang.cpp)
-add_library(transit src/null.cpp)
-add_executable(tls src/list.cpp)
-add_executable(tgen src/proto.cpp)
-add_executable(tjson src/json.cpp)
-target_link_libraries(transitClang ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
-target_link_libraries(transitProto protobuf)
-target_link_libraries(transit transitAST transitClang transitProto)
-target_link_libraries(tjson transit)
-target_link_libraries(tls transit)
-target_link_libraries(tgen transit)
+add_executable(transc src/generate.cpp)
+target_link_libraries(transitClang transit ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
+target_link_libraries(transc transitClang)
 
 file(GLOB TEST_FILES test/*.cpp)
 add_executable(transitTests ${TEST_FILES})
-target_link_libraries(transitTests transit gtest gtest_main)
+target_link_libraries(transitTests transitClang gtest gtest_main)
 
-install(TARGETS tjson tgen RUNTIME DESTINATION bin)
+install(TARGETS transc RUNTIME DESTINATION bin)
 
