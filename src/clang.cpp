@@ -4,7 +4,7 @@
 
 #include "config.h"
 #include "Transit/AST.h"
-#include "Transit/Analyser.h"
+#include "Transit/ClangSourceAnalyser.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
@@ -137,9 +137,9 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
-    auto converted(new transit::FixedArrayType);
-    converted->count = type->getSize().getLimitedValue();
-    converted->elementType = VisitQualType(type->getElementType());
+    auto count = type->getSize().getLimitedValue();
+    auto elType = VisitQualType(type->getElementType());
+    auto converted(new transit::FixedArrayType(elType, count));
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
@@ -148,8 +148,8 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
-    auto converted(new transit::PointerType);
-    converted->referencedType = VisitQualType(type->getPointeeType());
+    auto referencedType = VisitQualType(type->getPointeeType());
+    auto converted(new transit::PointerType(referencedType));
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
@@ -158,8 +158,8 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
-    auto converted(new PrimitiveType);
-    converted->primitiveKind = clangBuiltinTypeKindToTransitPrimitiveKind(type);
+    auto primKind = clangBuiltinTypeKindToTransitPrimitiveKind(type);
+    auto converted(new PrimitiveType(primKind));
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
@@ -170,8 +170,8 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
       return match->second;
     // Skip creation of qualified types where no qualifiers are present
     if (qt.hasLocalQualifiers()) {
-      auto converted = new transit::QualType;
-      converted->underlyingType = Visit(qt.getTypePtr());
+      auto underlyingType = Visit(qt.getTypePtr());
+      auto converted = new transit::QualType(underlyingType);
       converted->setConst(qt.isConstQualified());
       converted->setVolatile(qt.isVolatileQualified());
       types.emplace(qt, converted);
@@ -242,9 +242,8 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
-    auto converted = new transit::PointerType;
-    converted->isBlockPtr = true;
-    converted->referencedType = VisitQualType(type->getPointeeType());
+    auto referencedType = VisitQualType(type->getPointeeType());
+    auto converted = new transit::PointerType(referencedType, transit::PointerType::BLOCK);
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
@@ -253,8 +252,8 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
-    auto converted = new transit::FunctionType;
-    converted->returnType = VisitQualType(type->getReturnType());
+    auto returnType = VisitQualType(type->getReturnType());
+    auto converted = new transit::FunctionType(returnType);
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
 	};
@@ -263,10 +262,10 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
-    auto converted = new transit::FunctionType;
+    auto returnType = VisitQualType(type->getReturnType());
+    auto converted = new transit::FunctionType(returnType);
     for (auto paramType: type->param_types())
       converted->addParamType(VisitQualType(paramType));
-    converted->returnType = VisitQualType(type->getReturnType());
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
@@ -286,43 +285,34 @@ struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, transit:
   ValueConverter valueConverter;
 
   transit::Export* VisitTypedefDecl(const TypedefDecl* decl) {
-    auto e = new transit::Export;
-    e->name = decl->getNameAsString();
-    e->type = typeConverter.VisitQualType(decl->getUnderlyingType());
-    e->value = NULL;
-    return e;
+    auto name = decl->getNameAsString();
+    auto type = typeConverter.VisitQualType(decl->getUnderlyingType());
+    return new transit::Export(name, type);
   }
 
   transit::Export* VisitFunctionDecl(const FunctionDecl* decl) {
-    auto e = new transit::Export;
-    e->name = decl->getNameAsString();
-    e->type = typeConverter.VisitQualType(decl->getType());
-    e->value = NULL;
-    return e;
+    auto name = decl->getNameAsString();
+    auto type = typeConverter.VisitQualType(decl->getType());
+    return new transit::Export(name, type);
   };
 
   transit::Export* VisitVarDecl(const VarDecl* decl) {
-    auto e = new transit::Export;
-    e->name = decl->getNameAsString();
-    e->type = typeConverter.VisitQualType(decl->getType());
-    //e->value = new transit::PrimitiveValue;
-    return e;
+    auto name = decl->getNameAsString();
+    auto type = typeConverter.VisitQualType(decl->getType());
+    //auto value = new transit::Primti;
+    return new transit::Export(name, type);
   }
 
   transit::Export* VisitRecordDecl(const RecordDecl* decl) {
-    auto e = new transit::Export;
-    e->name = decl->getNameAsString();
-    e->type = typeConverter.Visit(decl->getTypeForDecl());
-    e->value = NULL;
-    return e;
+    auto name = decl->getNameAsString();
+    auto type = typeConverter.Visit(decl->getTypeForDecl());
+    return new transit::Export(name, type);
   }
 
   transit::Export* VisitEnumDecl(const EnumDecl* decl) {
-    auto e = new transit::Export;
-    e->name = decl->getNameAsString();
-    e->type = typeConverter.Visit(decl->getTypeForDecl());
-    e->value = NULL;
-    return e;
+    auto name = decl->getNameAsString();
+    auto type = typeConverter.Visit(decl->getTypeForDecl());
+    return new transit::Export(name, type);
   }
 
 };
@@ -363,7 +353,7 @@ public:
 
 };
 
-int transit::Analyser::scan(std::vector<std::string> headers, std::vector<const char*> compilerArgs) {
+int transit::ClangSourceAnalyser::analyse(std::vector<std::string> headers, std::vector<const char*> compilerArgs) {
 
   // do some magic to get the correct compiler args
   static std::vector<const char*> defaultArgs DEFAULT_ARGS_INITIALIZER;
@@ -393,11 +383,12 @@ int transit::Analyser::scan(std::vector<std::string> headers, std::vector<const 
   // convert them to our local AST and insert them into the analyser
   NamedDeclConverter declConverter;
   for (auto decl: decls) {
-    exports.insert(declConverter.Visit(decl));
+    catalog.addExport(declConverter.Visit(decl));
   }
   // as a side-effect of the transformation, all types were converted
   // insert them too
-  boost::copy(declConverter.typeConverter.types | boost::adaptors::map_values, std::inserter(types, types.end()));
+  for (auto type: declConverter.typeConverter.types | boost::adaptors::map_values)
+    catalog.addType(type);
 
   // clean up some things we don't need anymore
   delete db;

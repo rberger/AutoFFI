@@ -1,18 +1,40 @@
 
+#include <iostream>
+
+#include "Transit/ClangSourceAnalyser.h"
+#include "Transit/CountMap.hpp"
+#include "Transit/Format.h"
+
 #include "llvm/Support/CommandLine.h"
 
-#include "analyse.cpp" 
-
 using namespace llvm;
+using namespace transit;
 
+//static cl::opt<std::string> OutFile("o", cl::desc("Location of output file"));
 
-//cl::opt<std::string> StructPath("struct", cl::desc("Specify a path to a structure to generate source code for"), cl::value_desc("struct path"));
-//cl::opt<std::string> OutputFilename("o", cl::desc("Specify output filename"), cl::value_desc("filename"));
+static cl::opt<WriteOptions::Format> OutFormat(cl::desc("Available Optimizations:"),
+        cl::values(
+             clEnumValN(WriteOptions::Format::JSON, "json", "Transmit JSON"),
+             clEnumValN(WriteOptions::Format::PROTOBUF, "protobuf", "Google's protocol buffer format"),
+             clEnumValN(WriteOptions::Format::DEBUGSTR, "debug", "Debug output")));
+static cl::list<std::string> Files(cl::Positional, cl::desc("Files to parse"), cl::OneOrMore);
 
 int main(int argc, const char* argv[]) {
-  //CommonOptionsParser OptionsParser(argc, argv, MyToolCategory);
-  //ClangTool Tool(OptionsParser.getCompilations(),
-                 //OptionsParser.getSourcePathList());
-  //addStructs(
+
+  auto sep(std::find_if(argv, argv+argc, [](const char* arg) {
+    return !strcmp(arg, "--");
+  }));
+
+  std::vector<const char*> compilerArgs(sep == argv+argc ? sep : sep+1, argv+argc);
+
+  cl::ParseCommandLineOptions(sep-argv, argv);
+  ClangSourceAnalyser a;
+  if (int res = a.analyse(Files, compilerArgs))
+    return res;
+
+  WriteOptions opts;
+  opts.format = OutFormat;
+  Format format;
+  format.write(a.getCatalog(), std::cout, opts);
 }
 

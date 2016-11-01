@@ -1,0 +1,8 @@
+
+#ifndef AUTOFFI_CONFIG_H_
+#define AUTOFFI_CONFIG_H_
+
+#define DEFAULT_ARGS_INITIALIZER @tool_default_args@
+
+#endif
+
