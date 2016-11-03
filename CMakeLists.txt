@@ -43,6 +43,7 @@ configure_file(src/config.h.in "${CMAKE_SOURCE_DIR}/src/config.h")
 include_directories(include/)
 
 add_subdirectory(vendor/transit/)
+include_directories(vendor/transit/include)
 
 llvm_map_components_to_libnames(LLVM_LIBRARIES all)
 add_definitions(${LLVM_DEFINITIONS})
