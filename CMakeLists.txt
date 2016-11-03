@@ -8,6 +8,7 @@ project(Transit CXX)
 set(CMAKE_CXX_STANDARD 11)
 
 #add_definitions(-stdlib=libc++)
+add_definitions(-flto)
 
 find_package(STDLIB)
 find_package(LLVM 4.0 REQUIRED CONFIG)
