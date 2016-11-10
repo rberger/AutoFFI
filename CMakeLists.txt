@@ -51,7 +51,7 @@ add_definitions(${LLVM_DEFINITIONS})
 add_library(transitClang src/clang.cpp)
 add_executable(transc src/generate.cpp)
 target_link_libraries(transitClang transit ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
-target_link_libraries(transc transitClang)
+target_link_libraries(affc transitClang)
 
 #file(GLOB TEST_FILES test/*.cpp)
 #add_executable(transitTests ${TEST_FILES})
