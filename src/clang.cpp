@@ -5,6 +5,7 @@
 #include "config.h"
 #include "Transit/AST.h"
 #include "Transit/ClangSourceAnalyser.h"
+#include "Transit/TypeSorter.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
@@ -386,9 +387,13 @@ int transit::ClangSourceAnalyser::analyse(std::vector<std::string> headers, std:
     catalog.addExport(declConverter.Visit(decl));
   }
   // as a side-effect of the transformation, all types were converted
-  // insert them too
-  for (auto type: declConverter.typeConverter.types | boost::adaptors::map_values)
+  // perform a topological sort on them
+  for (auto type: declConverter.typeConverter.types | boost::adaptors::map_values) std::cerr << type << std::endl; std::cerr << std::endl;
+  TypeSorter sorted(declConverter.typeConverter.types | boost::adaptors::map_values);
+  // and add them to the catalog, in order
+  for (auto type: sorted)
     catalog.addType(type);
+  for (auto type: catalog.getTypes()) std::cerr << type << std::endl; std::cerr << std::endl;
 
   // clean up some things we don't need anymore
   delete db;
