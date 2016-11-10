@@ -53,9 +53,9 @@ add_executable(transc src/generate.cpp)
 target_link_libraries(transitClang transit ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
 target_link_libraries(transc transitClang)
 
-file(GLOB TEST_FILES test/*.cpp)
-add_executable(transitTests ${TEST_FILES})
-target_link_libraries(transitTests transitClang gtest gtest_main)
+#file(GLOB TEST_FILES test/*.cpp)
+#add_executable(transitTests ${TEST_FILES})
+#target_link_libraries(transitTests transitClang gtest gtest_main)
 
 install(TARGETS transc RUNTIME DESTINATION bin)
 
