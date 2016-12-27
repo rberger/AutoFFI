@@ -6,6 +6,13 @@ scripting languages. This repository contains the compiler which compiles
 C/C++/ObjectiveC down to a "language-agnostic" AST compatible with the C-family
 of languages.
 
+## Help Wanted
+
+Do you like compilers? Do you know LLVM? Would you like to be able to call
+C/C++/ObjectiveC code directly without the hassle of binding? Then help us out!
+Check out [the issues](https://github.com/AutoFFI/AutoFFI/issues) to get an
+idea of what needs to be done and file a pull request whenever you like.
+
 ## Installation
 
 Grab the latest [release](https://github.com/AutoFFI/AutoFFI/releases) and add
