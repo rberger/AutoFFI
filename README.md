@@ -2,7 +2,15 @@ AutoFFI
 =======
 
 AutoFFI is a way to call compiled code from higher-level languages, such as
-scripting languages.
+scripting languages. This repository contains the compiler which compiles
+C/C++/ObjectiveC down to a "language-agnostic" AST compatible with the C-family
+of languages.
+
+## Where is the source?
+
+The source is currently held private, until a decent license and an appropriate
+roadmap has been made.
+
 
 ## Installation
 
