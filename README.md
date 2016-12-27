@@ -1,10 +1,41 @@
-Transit Clang Driver
-====================
+AutoFFI
+=======
 
-This is a driver for [Transit](http://github.com/samvv/Transit) which makes it
-possible to convert C/C++/ObjectiveC source code to a Transit AST. A Transit
-AST can in turn be used for a variety of applications. For more information,
-visit the [Transit homepage](http://github.com/samvv/Tranit).
+AutoFFI is a way to call compiled code from higher-level languages, such as
+scripting languages.
 
-`transc` is the name of the binary which is able to compile to a Tansit AST.
+## Installation
+
+Grab the latest [release](https://github.com/AutoFFI/AutoFFI/releases) and add
+the binaries somewhere to your `$PATH`, or use one of the platform-specific
+installation instructions provided below.
+
+### OS X
+
+The easiest way to install the AutoFFI compiler is through [Homebrew Cask](https://caskroom.github.io/). **Note:** this is a [work in progress](https://github.com/caskroom/homebrew-cask/pull/26625)
+
+```
+$ brew cask install autoffi
+```
+
+## Usage
+
+```
+$ affc -json myprog.c > api.json
+```
+
+Generates a special AST from a set of sources. For more information, read the
+[example](http://github.com/AutoFFI/AutoFFI/tree/master/example/).
+
+## Limitations
+
+### Garbage Collection
+
+AutoFFI allows you to call low-level procedures _as is_, without any fancy
+things such as garbage collection. In order to achieve that you will still have
+to write your own code.
+
+## Credits
+
+ - Anthony Green for his marvellous [libffi](http://github.com/libffi/libffi)
 
