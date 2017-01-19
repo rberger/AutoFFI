@@ -11,8 +11,12 @@ set(CMAKE_CXX_STANDARD 11)
 add_definitions(-flto)
 
 find_package(STDLIB)
-find_package(LLVM 4.0 REQUIRED CONFIG)
+find_package(LLVM 3.9 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(CLANG REQUIRED)
+find_package(Protobuf REQUIRED HINT vendor/protobuf)
+
+include_directories(${CLANG_INCLUDE_DIRS})
+add_subdirectory(vendor/protobuf/cmake)
 
 function(initializer_list lst var)
   set(acc "{")
@@ -45,14 +49,23 @@ include_directories(include/)
 llvm_map_components_to_libnames(LLVM_LIBRARIES all)
 add_definitions(${LLVM_DEFINITIONS})
 
-add_library(transitClang src/clang.cpp)
-add_executable(transc src/generate.cpp)
-target_link_libraries(transitClang transit ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
-target_link_libraries(affc transitClang)
+add_library(autoffi 
+	src/Catalog.cpp
+  src/SymbolTable.cpp
+  src/AST.cpp
+  src/ProtoFormat.cpp
+  src/TypeSorter.cpp
+  src/transit.pb.cc
+)
+add_library(autoffiClang src/clang.cpp)
+add_executable(affc src/generate.cpp)
+target_link_libraries(autoffi ${PROTOBUF_LIBRARIES})
+target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
+target_link_libraries(affc autoffiClang)
 
 #file(GLOB TEST_FILES test/*.cpp)
 #add_executable(transitTests ${TEST_FILES})
 #target_link_libraries(transitTests transitClang gtest gtest_main)
 
-install(TARGETS transc RUNTIME DESTINATION bin)
+install(TARGETS affc RUNTIME DESTINATION bin)
 
