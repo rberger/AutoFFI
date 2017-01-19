@@ -1,0 +1,127 @@
+syntax = "proto3";
+option cc_enable_arenas = true;
+
+package transit.proto;
+
+/** Types */
+
+enum PrimitiveKind {
+  Bool       = 0;
+  Char_U     = 1;
+  UChar      = 2;
+  WChar_U    = 3;
+  Char16     = 4;
+  Char32     = 5;
+  UShort     = 6;
+  UInt       = 7;
+  ULong      = 8;
+  ULongLong  = 9;
+  UInt128    = 10;
+  Char_S     = 11;
+  SChar      = 12;
+  WChar_S    = 13;
+  Short      = 14;
+  Int        = 15;
+  Long       = 16;
+  LongLong   = 17;
+  Int128     = 18;
+  Half       = 19;
+  Float      = 20;
+  Double     = 21;
+  LongDouble = 22;
+  NullPtr    = 23;
+  Void       = 24;
+} 
+
+message RecordField {
+  string name = 1;
+  int32 type = 2;
+  Value defaultValue = 3;
+};
+
+message EnumValue {
+  string name = 1;
+  int32 value = 2;
+}
+
+enum TypeKind {
+  UNDEFINED = 0;
+  PRIMITIVE = 1;
+  RECORD    = 2; // NOTE: unused
+  ARRAY     = 3;
+  POINTER   = 4;
+  FUNCTION  = 5;
+  ENUM      = 6;
+  QUALIFIED = 7;
+  STRUCT    = 8;
+  UNION     = 9;
+};
+
+message Type {
+
+  int32 id = 1;
+  TypeKind kind = 2; 
+
+  // pointer type
+  int32 referencedType = 5;
+  bool isBlockPointer = 6;
+  
+  // array type
+  int32 elementType = 10;
+  int32 size = 11;
+
+  // primitive type
+  PrimitiveKind primitiveKind = 15;
+
+  // record type
+  enum RecordKind {
+    UNDEFINED = 0;
+    STRUCT    = 1;
+    UNION     = 2;
+  };
+  RecordKind recordKind = 20;
+  repeated RecordField field = 21;
+
+  // function type
+  int32 returnType = 25;
+  repeated int32 paramType = 26;
+
+  // enum type
+  repeated EnumValue value = 30;
+  
+  // qualified type
+  bool isConst = 50;
+  bool isVolatile = 51;
+  int32 underlyingType = 49;
+}
+
+/** Values */
+
+message Value {
+ 
+  // reference to type identifier
+  int32 typeId = 1;
+
+  // function types
+  string mangledName = 5;
+
+  // primitive type
+  bytes value = 10;
+};
+
+/** Exports */ 
+
+message Export {
+  string name = 1;
+  int32 type = 2;
+  Value value = 3;
+}
+
+/** Storage */
+
+message Catalog {
+  repeated Type type = 1;
+  repeated Export export = 2;
+};
+
+
