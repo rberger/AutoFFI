@@ -1,6 +1,8 @@
 AutoFFI
 =======
 
+[![Build Status](https://travis-ci.org/AutoFFI/AutoFFI.svg?branch=master)](https://travis-ci.org/AutoFFI/AutoFFI)
+
 AutoFFI is a way to call compiled code from higher-level languages, such as
 scripting languages. This repository contains the compiler which compiles
 C/C++/ObjectiveC down to a "language-agnostic" AST compatible with the C-family
