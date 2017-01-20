@@ -115,9 +115,9 @@ struct TypeToMessageConverter : public ConstTypeVisitor<TypeToMessageConverter> 
 };
 
 proto::Catalog* convert(Catalog& c) {
-  transit::CountMap<const transit::Type*> typeIdx(c.getTypes());
+  autoffi::CountMap<const autoffi::Type*> typeIdx(c.getTypes());
   auto message = new proto::Catalog;
-  transit::TypeToMessageConverter converter(message, typeIdx);
+  autoffi::TypeToMessageConverter converter(message, typeIdx);
   for (auto type: c.getTypes())
     converter.visit(type);
   for (auto ex: c.getExports()) {

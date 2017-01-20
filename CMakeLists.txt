@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 2.8)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules")
 
-project(Transit CXX)
+project(AutoFFI CXX C)
 
 set(CMAKE_CXX_STANDARD 11)
 
@@ -12,8 +12,8 @@ add_definitions(-flto)
 
 find_package(STDLIB)
 find_package(LLVM 3.9 REQUIRED CONFIG HINTS /usr/local/opt)
-find_package(CLANG REQUIRED)
-find_package(Protobuf REQUIRED HINT vendor/protobuf)
+find_package(Clang REQUIRED)
+#find_package(Protobuf REQUIRED HINT "${CMAKE_CURRENT_SOURCE_DIR}/vendor/protobuf-3.1.0")
 
 include_directories(${CLANG_INCLUDE_DIRS})
 add_subdirectory(vendor/protobuf/cmake)
@@ -55,11 +55,11 @@ add_library(autoffi
   src/AST.cpp
   src/ProtoFormat.cpp
   src/TypeSorter.cpp
-  src/transit.pb.cc
+  src/autoffi.pb.cc
 )
 add_library(autoffiClang src/clang.cpp)
 add_executable(affc src/generate.cpp)
-target_link_libraries(autoffi ${PROTOBUF_LIBRARIES})
+target_link_libraries(autoffi libprotobuf)
 target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
 target_link_libraries(affc autoffiClang)
 

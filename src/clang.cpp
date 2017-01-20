@@ -116,17 +116,17 @@ PrimitiveKind clangBuiltinTypeKindToTransitPrimitiveKind(const BuiltinType* type
 /**
  * Converts an arbitrary Clang type to a Transit type.
  */
-struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> {
+struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> {
 
-  std::map<const clang::QualType, transit::Type*, ClangQualTypeLT> types;
+  std::map<const clang::QualType, autoffi::Type*, ClangQualTypeLT> types;
 
-  transit::Type* VisitType(const clang::Type* type) {
+  autoffi::Type* VisitType(const clang::Type* type) {
     std::cerr << "warning: could not process the following type:" << std::endl;
     type->dump();
     throw std::runtime_error("unconvertable type");
   }
 
-  transit::Type* VisitTypedefType(const TypedefType* type) {
+  autoffi::Type* VisitTypedefType(const TypedefType* type) {
     // Skip typedefs which are not captured as an export
     auto converted(VisitQualType(type->desugar()));
     // NOTE: I do not have to be added to the map
@@ -134,28 +134,28 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     return converted;
   }
 
-  transit::Type* VisitConstantArrayType(const clang::ConstantArrayType* type) {
+  autoffi::Type* VisitConstantArrayType(const clang::ConstantArrayType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto count = type->getSize().getLimitedValue();
     auto elType = VisitQualType(type->getElementType());
-    auto converted(new transit::FixedArrayType(elType, count));
+    auto converted(new autoffi::FixedArrayType(elType, count));
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
 
-  transit::Type* VisitPointerType(const clang::PointerType* type) {
+  autoffi::Type* VisitPointerType(const clang::PointerType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto referencedType = VisitQualType(type->getPointeeType());
-    auto converted(new transit::PointerType(referencedType));
+    auto converted(new autoffi::PointerType(referencedType));
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
 
-  transit::Type* VisitBuiltinType(const BuiltinType* type) {
+  autoffi::Type* VisitBuiltinType(const BuiltinType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
@@ -165,14 +165,14 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     return converted;
   }
 
-  transit::Type* VisitQualType(const clang::QualType& qt) {
+  autoffi::Type* VisitQualType(const clang::QualType& qt) {
     auto match(types.find(qt));
     if (match != types.end())
       return match->second;
     // Skip creation of qualified types where no qualifiers are present
     if (qt.hasLocalQualifiers()) {
       auto underlyingType = Visit(qt.getTypePtr());
-      auto converted = new transit::QualType(underlyingType);
+      auto converted = new autoffi::QualType(underlyingType);
       converted->setConst(qt.isConstQualified());
       converted->setVolatile(qt.isVolatileQualified());
       types.emplace(qt, converted);
@@ -185,7 +185,7 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     }
   }
 
-  transit::Type* VisitElaboratedType(const clang::ElaboratedType* type) {
+  autoffi::Type* VisitElaboratedType(const clang::ElaboratedType* type) {
     // Elaborated types are ignored by the AST; their referenced type is used
     auto converted = VisitQualType(type->getNamedType());
     // NOTE: I do not have to be added to the map
@@ -193,7 +193,7 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     return converted;
   }
 
-  transit::Type* VisitParenType(const clang::ParenType* type) {
+  autoffi::Type* VisitParenType(const clang::ParenType* type) {
     // Parenhesed types are expanded
     auto converted = VisitQualType(type->desugar());
     // NOTE: I do not have to be added to the map
@@ -201,31 +201,31 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     return converted;
   }
 
-  transit::Type* VisitEnumType(const clang::EnumType* type) {
+  autoffi::Type* VisitEnumType(const clang::EnumType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto decl(type->getDecl());
-    auto converted = new transit::EnumType;
+    auto converted = new autoffi::EnumType;
     for (auto value: decl->enumerators())
       converted->addValue(value->getNameAsString(), value->getInitVal().getLimitedValue());
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
 
-  transit::Type* VisitRecordType(const clang::RecordType* type) {
+  autoffi::Type* VisitRecordType(const clang::RecordType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto decl(type->getDecl());
-    transit::RecordType* converted;
+    autoffi::RecordType* converted;
     switch (decl->getTagKind()) {
     case TTK_Struct:
     case TTK_Class:
-      converted = new transit::StructType;
+      converted = new autoffi::StructType;
       break;
     case TTK_Union:
-      converted = new transit::UnionType;
+      converted = new autoffi::UnionType;
       break;
     default:
       std::cerr << "unrecognised record type" << std::endl;
@@ -239,32 +239,32 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, transit::Type*> 
     return converted;
   }
 
-  transit::Type* VisitBlockPointerType(const BlockPointerType* type) {
+  autoffi::Type* VisitBlockPointerType(const BlockPointerType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto referencedType = VisitQualType(type->getPointeeType());
-    auto converted = new transit::PointerType(referencedType, transit::PointerType::BLOCK);
+    auto converted = new autoffi::PointerType(referencedType, autoffi::PointerType::BLOCK);
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
   }
 
-	transit::Type* VisitFunctionNoProtoType(const FunctionNoProtoType* type) {
+	autoffi::Type* VisitFunctionNoProtoType(const FunctionNoProtoType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto returnType = VisitQualType(type->getReturnType());
-    auto converted = new transit::FunctionType(returnType);
+    auto converted = new autoffi::FunctionType(returnType);
     types.emplace(clang::QualType(type, 0), converted);
     return converted;
 	};
 
-  transit::Type* VisitFunctionProtoType(const FunctionProtoType* type) {
+  autoffi::Type* VisitFunctionProtoType(const FunctionProtoType* type) {
     auto match(types.find(clang::QualType(type, 0)));
     if (match != types.end())
       return match->second;
     auto returnType = VisitQualType(type->getReturnType());
-    auto converted = new transit::FunctionType(returnType);
+    auto converted = new autoffi::FunctionType(returnType);
     for (auto paramType: type->param_types())
       converted->addParamType(VisitQualType(paramType));
     types.emplace(clang::QualType(type, 0), converted);
@@ -280,40 +280,40 @@ struct ValueConverter {
 /**
  * Converts a named declaration to a Transit symbol export.
  */
-struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, transit::Export*> {
+struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, autoffi::Export*> {
 
   TypeConverter typeConverter;
   ValueConverter valueConverter;
 
-  transit::Export* VisitTypedefDecl(const TypedefDecl* decl) {
+  autoffi::Export* VisitTypedefDecl(const TypedefDecl* decl) {
     auto name = decl->getNameAsString();
     auto type = typeConverter.VisitQualType(decl->getUnderlyingType());
-    return new transit::Export(name, type);
+    return new autoffi::Export(name, type);
   }
 
-  transit::Export* VisitFunctionDecl(const FunctionDecl* decl) {
+  autoffi::Export* VisitFunctionDecl(const FunctionDecl* decl) {
     auto name = decl->getNameAsString();
     auto type = typeConverter.VisitQualType(decl->getType());
-    return new transit::Export(name, type);
+    return new autoffi::Export(name, type);
   };
 
-  transit::Export* VisitVarDecl(const VarDecl* decl) {
+  autoffi::Export* VisitVarDecl(const VarDecl* decl) {
     auto name = decl->getNameAsString();
     auto type = typeConverter.VisitQualType(decl->getType());
-    //auto value = new transit::Primti;
-    return new transit::Export(name, type);
+    //auto value = new autoffi::Primti;
+    return new autoffi::Export(name, type);
   }
 
-  transit::Export* VisitRecordDecl(const RecordDecl* decl) {
+  autoffi::Export* VisitRecordDecl(const RecordDecl* decl) {
     auto name = decl->getNameAsString();
     auto type = typeConverter.Visit(decl->getTypeForDecl());
-    return new transit::Export(name, type);
+    return new autoffi::Export(name, type);
   }
 
-  transit::Export* VisitEnumDecl(const EnumDecl* decl) {
+  autoffi::Export* VisitEnumDecl(const EnumDecl* decl) {
     auto name = decl->getNameAsString();
     auto type = typeConverter.Visit(decl->getTypeForDecl());
-    return new transit::Export(name, type);
+    return new autoffi::Export(name, type);
   }
 
 };
@@ -354,7 +354,7 @@ public:
 
 };
 
-int transit::ClangSourceAnalyser::analyse(std::vector<std::string> headers, std::vector<const char*> compilerArgs) {
+int autoffi::ClangSourceAnalyser::analyse(std::vector<std::string> headers, std::vector<const char*> compilerArgs) {
 
   // do some magic to get the correct compiler args
   static std::vector<const char*> defaultArgs DEFAULT_ARGS_INITIALIZER;
