@@ -1,11 +1,14 @@
+dist: trusty
+sudo: required
 before_install:
-  - echo "deb http://apt.llvm.org/jessie/ llvm-toolchain-jessie-4.0 main" | sudo tee -a /etc/apt/sources.list 
-  - echo "deb-src http://apt.llvm.org/jessie/ llvm-toolchain-jessie-4.0 main" | sudo tee -a /etc/apt/sources.list
+  - wget -O - http://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
+  - echo "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main" | sudo tee -a /etc/apt/sources.list 
+  - echo "deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main" | sudo tee -a /etc/apt/sources.list
 install:
-  - apt-get update
-  - apt-get install clang-4.0 llvm-4.0 llvm-4.0-dev
+  - sudo apt-get update
+  - sudo apt-get install -y clang-3.9-dev llvm-3.9-dev
 script:
-  - mkdir -p build/Debug && cd build/Debug
+  - mkdir -p build/Release && cd build/Release
   - cmake ../../ -DCMAKE_BUILD_TYPE=Release
   - make
   - make test
