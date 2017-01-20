@@ -1,0 +1,11 @@
+before_install:
+  - echo "deb http://apt.llvm.org/jessie/ llvm-toolchain-jessie-4.0 main" | sudo tee -a /etc/apt/sources.list 
+  - echo "deb-src http://apt.llvm.org/jessie/ llvm-toolchain-jessie-4.0 main" | sudo tee -a /etc/apt/sources.list
+install:
+  - apt-get update
+  - apt-get install clang-4.0 llvm-4.0 llvm-4.0-dev
+script:
+  - mkdir -p build/Debug && cd build/Debug
+  - cmake ../../ -DCMAKE_BUILD_TYPE=Release
+  - make
+  - make test
