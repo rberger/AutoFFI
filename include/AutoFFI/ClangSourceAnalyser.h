@@ -1,13 +1,13 @@
 
-#ifndef TRANSIT_ANALYSER_H_
-#define TRANSIT_ANALYSER_H_
+#ifndef AUTOFFI_ANALYSER_H_
+#define AUTOFFI_ANALYSER_H_
 
 #include <set>
 
-#include "Transit/AST.h"
-#include "Transit/Catalog.h"
+#include "AST.h"
+#include "Catalog.h"
 
-namespace transit {
+namespace autoffi {
 
 class ClangSourceAnalyser {
   Catalog catalog;

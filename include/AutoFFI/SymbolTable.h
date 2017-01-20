@@ -1,12 +1,12 @@
 
-#ifndef SYMBOL_TABLE_H_
-#define SYMBOL_TABLE_H_
+#ifndef AUTOFFI_SYMBOL_TABLE_H_
+#define AUTOFFI_SYMBOL_TABLE_H_
 
 #include <map>
 #include <boost/range/iterator_range.hpp>
 #include "AST.h"
 
-namespace transit {
+namespace autoffi {
 
 /**
  * Provides efficient lookup of exports based on their name.

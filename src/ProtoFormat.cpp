@@ -5,16 +5,16 @@
 
 #include <iostream>
 
-#include "Transit/AST.h"
-#include "Transit/CountMap.hpp"
-#include "Transit/Format.h"
-#include "transit.pb.h"
+#include "AutoFFI/AST.h"
+#include "AutoFFI/CountMap.hpp"
+#include "AutoFFI/Format.h"
+#include "autoffi.pb.h"
 
 #include <google/protobuf/util/json_util.h>
 #include <google/protobuf/io/zero_copy_stream_impl.h>
 #include <google/protobuf/text_format.h>
 
-namespace transit {
+namespace autoffi {
 
 struct TypeToMessageConverter : public ConstTypeVisitor<TypeToMessageConverter> {
 

@@ -1,7 +1,7 @@
 
-#include "Transit/SymbolTable.h"
+#include "AutoFFI/SymbolTable.h"
 
-namespace transit {
+namespace autoffi {
 
 size_t SymbolTable::size() const {
   return table.size();

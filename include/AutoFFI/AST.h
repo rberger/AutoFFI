@@ -5,8 +5,8 @@
  * Read more on http://github.com/samvv/Transit/tree/master/doc/types.md
  */
 
-#ifndef TRANSIT_AST_H_
-#define TRANSIT_AST_H_
+#ifndef AUTOFFI_AST_H_
+#define AUTOFFI_AST_H_
 
 // FIXME: increase performance by removing these
 #include <boost/range.hpp>
@@ -16,7 +16,7 @@
 #include <string>
 #include <vector>
 
-namespace transit {
+namespace autoffi {
 
 enum class PrimitiveKind {
   Bool,

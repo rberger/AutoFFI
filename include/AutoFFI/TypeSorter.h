@@ -1,6 +1,6 @@
 
-#ifndef TRANSIT_TYPE_SORT_H_
-#define TRANSIT_TYPE_SORT_H_
+#ifndef AUTOFFI_TYPE_SORT_H_
+#define AUTOFFI_TYPE_SORT_H_
 
 #include <iostream> // for debugging only
 
@@ -15,7 +15,7 @@
 #include "boost/bimap.hpp"
 #include "boost/graph/adjacency_list.hpp"
 
-namespace transit {
+namespace autoffi {
 
 struct vertex_info {
   Type* type;

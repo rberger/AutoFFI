@@ -1,9 +1,9 @@
 
-#include "Transit/TypeSorter.h"
+#include "AutoFFI/TypeSorter.h"
 
 #include "boost/graph/topological_sort.hpp"
 
-namespace transit {
+namespace autoffi {
 
 void TypeSorter::addDependency(Type* a, Type* b) {
   auto u(getVertex(a)), v(getVertex(b));

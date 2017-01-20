@@ -1,14 +1,14 @@
 
 #include <iostream>
 
-#include "Transit/ClangSourceAnalyser.h"
-#include "Transit/CountMap.hpp"
-#include "Transit/Format.h"
+#include "AutoFFI/ClangSourceAnalyser.h"
+#include "AutoFFI/CountMap.hpp"
+#include "AutoFFI/Format.h"
 
 #include "llvm/Support/CommandLine.h"
 
 using namespace llvm;
-using namespace transit;
+using namespace autoffi;
 
 //static cl::opt<std::string> OutFile("o", cl::desc("Location of output file"));
 

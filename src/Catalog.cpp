@@ -1,7 +1,7 @@
 
-#include "Transit/Catalog.h"
+#include "AutoFFI/Catalog.h"
 
-namespace transit {
+namespace autoffi {
 
 Catalog::export_range Catalog::getExports() {
   return boost::make_iterator_range(exports.begin(), exports.end());

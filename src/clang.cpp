@@ -3,9 +3,9 @@
 #include <sstream>
 
 #include "config.h"
-#include "Transit/AST.h"
-#include "Transit/ClangSourceAnalyser.h"
-#include "Transit/TypeSorter.h"
+#include "AutoFFI/AST.h"
+#include "AutoFFI/ClangSourceAnalyser.h"
+#include "AutoFFI/TypeSorter.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
@@ -30,7 +30,7 @@
 #include "boost/range/adaptor/map.hpp"
 //#include "boost/iterator/filter_iterator.hpp"
 
-using namespace transit;
+using namespace autoffi;
 using namespace clang;
 using namespace clang::tooling;
 using namespace clang::ast_matchers;

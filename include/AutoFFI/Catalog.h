@@ -1,6 +1,6 @@
 
-#ifndef TRANSIT_CATALOG_H_
-#define TRANSIT_CATALOG_H_
+#ifndef AUTOFFI_CATALOG_H_
+#define AUTOFFI_CATALOG_H_
 
 #include <set>
 #include <deque>
@@ -8,7 +8,7 @@
 #include "AST.h"
 #include "SymbolTable.h"
 
-namespace transit {
+namespace autoffi {
 
 class Catalog {
   std::set<Export*> exports;

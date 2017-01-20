@@ -1,7 +1,7 @@
 
-#include "Transit/AST.h"
+#include "AutoFFI/AST.h"
 
-namespace transit {
+namespace autoffi {
 
 void EnumType::addValue(std::string name, unsigned long long value) {
   values.push_back(EnumValue(name, value));

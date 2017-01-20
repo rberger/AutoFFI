@@ -5,7 +5,7 @@
 #include <vector>
 
 #include "config.h"
-#include "Transit/Analyser.h"
+#include "AutoFFI/Analyser.h"
 
 //#include "llvm/Support/raw_ostream.h"
 #include "llvm/Support/CommandLine.h"

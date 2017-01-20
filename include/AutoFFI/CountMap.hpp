@@ -1,13 +1,13 @@
 
-#ifndef TRANSIT_INDEXER_H_
-#define TRANSIT_INDEXER_H_
+#ifndef AUTOFFI_INDEXER_H_
+#define AUTOFFI_INDEXER_H_
 
 #include "boost/range/iterator_range.hpp"
 
 #include <map>
 #include <sstream>
 
-namespace transit {
+namespace autoffi {
 
 template<typename V>
 std::string print(V val) {

@@ -5,7 +5,7 @@
 #include "AST.h"
 #include "Catalog.h"
 
-namespace transit {
+namespace autoffi {
 
 struct WriteOptions {
   enum Format {

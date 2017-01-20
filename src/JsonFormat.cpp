@@ -3,9 +3,9 @@
 
 #include <iostream>
 
-#include "Transit/CountMap.hpp"
-#include "Transit/AST.h"
-#include "Transit/Format.h"
+#include "AutoFFI/CountMap.hpp"
+#include "AutoFFI/AST.h"
+#include "AutoFFI/Format.h"
 
 #define JOIN(values, value, ops) { \
 	bool first = true; \
@@ -15,7 +15,7 @@
 		ops; \
 	}; }
 
-namespace transit {
+namespace autoffi {
 
 std::string getCNameOfPrimitiveKind(PrimitiveKind kind) {
   switch (kind) {
