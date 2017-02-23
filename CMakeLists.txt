@@ -7,11 +7,13 @@ project(AutoFFI CXX C)
 
 set(CMAKE_CXX_STANDARD 11)
 
+option(BUILD_TESTS "Enable building test targets and executables" ON)
+
 #add_definitions(-stdlib=libc++)
 add_definitions(-flto)
 
 find_package(STDLIB)
-find_package(LLVM 3.9 REQUIRED CONFIG HINTS /usr/local/opt)
+find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
 find_package(protobuf REQUIRED)
 #find_package(Protobuf REQUIRED HINT "${CMAKE_CURRENT_SOURCE_DIR}/vendor/protobuf-3.1.0")
@@ -59,7 +61,7 @@ add_library(autoffi
 )
 add_library(autoffiClang src/clang.cpp)
 add_executable(affc src/generate.cpp)
-target_link_libraries(autoffi libprotobuf)
+target_link_libraries(autoffi protobuf)
 target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
 target_link_libraries(affc autoffiClang)
 
@@ -68,4 +70,9 @@ target_link_libraries(affc autoffiClang)
 #target_link_libraries(transitTests transitClang gtest gtest_main)
 
 install(TARGETS affc RUNTIME DESTINATION bin)
+
+if (BUILD_TESTS)
+  enable_testing()
+  add_test(chipmunk ./affc ../../test/assets/chipmunk/include/chipmunk/chipmunk.h)
+endif()
 
