@@ -13,10 +13,10 @@ add_definitions(-flto)
 find_package(STDLIB)
 find_package(LLVM 3.9 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
+find_package(protobuf REQUIRED)
 #find_package(Protobuf REQUIRED HINT "${CMAKE_CURRENT_SOURCE_DIR}/vendor/protobuf-3.1.0")
 
 include_directories(${CLANG_INCLUDE_DIRS})
-add_subdirectory(vendor/protobuf/cmake)
 
 function(initializer_list lst var)
   set(acc "{")
