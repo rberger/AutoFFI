@@ -23,10 +23,12 @@ installation instructions provided below.
 
 ### OS X
 
-The easiest way to install the AutoFFI compiler is through [Homebrew Cask](https://caskroom.github.io/).
+The easiest way to install the AutoFFI compiler is through [Homebrew](https://brew.sh/).
+
+**Note:** this method is not supported yet
 
 ```
-$ brew cask install autoffi
+$ brew install autoffi
 ```
 
 ## Usage
