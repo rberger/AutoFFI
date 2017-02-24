@@ -12,7 +12,6 @@ option(BUILD_TESTS "Enable building test targets and executables" ON)
 #add_definitions(-stdlib=libc++)
 add_definitions(-flto)
 
-find_package(STDLIB)
 find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
 find_package(protobuf REQUIRED)
