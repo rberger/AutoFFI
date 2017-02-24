@@ -1,6 +1,6 @@
 
 test:
 	clang -o myprog.dylib -shared myprog.c
-	transc myprog.c -json > myprog.json
+	affc myprog.c > myprog.json
 	racket test.rkt
 
