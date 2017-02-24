@@ -408,15 +408,15 @@ using HeaderCollection = std::vector<std::string>;
 class EmitAutoFFIAction : public ASTFrontendAction {
   std::set<const NamedDecl*> Decls;
 public:
-  HeaderCollection& Headers;
+  MatchFinder Finder;
+  NameCollector Collector;
 
-  EmitAutoFFIAction(HeaderCollection& Headers): Headers(Headers) {};
+  EmitAutoFFIAction(HeaderCollection& Headers): Collector(Headers, Decls) {
+    Finder.addMatcher(MyMatcher, &Collector);
+  }
 
   std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
       clang::CompilerInstance &Compiler, llvm::StringRef InFile) override {
-    NameCollector nameCollector(Headers, Decls);
-    MatchFinder Finder;
-    Finder.addMatcher(MyMatcher, &nameCollector);
     return Finder.newASTConsumer();
   }
 };
@@ -475,16 +475,14 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
   //}
 
   const driver::Command &Cmd = cast<driver::Command>(*Jobs.begin());
-  std::cout << llvm::StringRef(Cmd.getCreator().getName()).str() << std::endl;
-  //if (llvm::StringRef(Cmd.getCreator().getName()) != "clang") {
-    //throw std::runtime_error("err_fe_expected_clang_command");
-    //Diags.Report(diag::err_fe_expected_clang_command);
-    //return 1;
-  //}
+  if (llvm::StringRef(Cmd.getCreator().getName()) != "clang") {
+    throw std::runtime_error("err_fe_expected_clang_command");
+    Diags.Report(diag::err_fe_expected_clang_command);
+    return 1;
+  }
 
   //// Initialize a compiler invocation object from the clang (-cc1) arguments.
   const driver::ArgStringList &CCArgs = Cmd.getArguments();
-  for (auto& arg: CCArgs) std::cout << arg << std::endl;
   std::unique_ptr<CompilerInvocation> CI(new CompilerInvocation);
   CompilerInvocation::CreateFromArgs(*CI,
                                      const_cast<const char **>(CCArgs.data()),
