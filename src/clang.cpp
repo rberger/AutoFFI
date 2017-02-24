@@ -121,12 +121,41 @@ PrimitiveKind clangBuiltinTypeKindToTransitPrimitiveKind(const BuiltinType* type
   }
 }
 
+#include <boost/multi_index_container.hpp>
+#include <boost/multi_index/member.hpp>
+#include <boost/multi_index/sequenced_index.hpp>
+#include <boost/multi_index/ordered_index.hpp>
+
+using namespace boost::multi_index;
+
+struct ClangType {};
+struct TypeSeq {};
+
+struct TypeRepr {
+  TypeRepr(clang::QualType clang, autoffi::Type* autoffi): clang(clang), autoffi(autoffi) {}
+  clang::QualType clang;
+  autoffi::Type* autoffi;
+};
+
+typedef multi_index_container<
+  TypeRepr,
+  indexed_by<
+    sequenced < tag <TypeSeq > >,
+    ordered_unique< 
+      tag<ClangType>, 
+      member < TypeRepr, clang::QualType, &TypeRepr::clang >,
+      ClangQualTypeLT
+    >
+  > 
+> TypeSet;
+
 /**
  * Converts an arbitrary Clang type to a Transit type.
  */
 struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> {
 
-  std::map<const clang::QualType, autoffi::Type*, ClangQualTypeLT> types;
+  //std::map<const clang::QualType, autoffi::Type*, ClangQualTypeLT> types;
+  TypeSet types;
 
   autoffi::Type* VisitType(const clang::Type* type) {
     std::cerr << "warning: could not process the following type:" << std::endl;
@@ -143,52 +172,52 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
   }
 
   autoffi::Type* VisitConstantArrayType(const clang::ConstantArrayType* type) {
-    auto match(types.find(clang::QualType(type, 0)));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     auto count = type->getSize().getLimitedValue();
     auto elType = VisitQualType(type->getElementType());
     auto converted(new autoffi::FixedArrayType(elType, count));
-    types.emplace(clang::QualType(type, 0), converted);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
   autoffi::Type* VisitPointerType(const clang::PointerType* type) {
-    auto match(types.find(clang::QualType(type, 0)));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     auto referencedType = VisitQualType(type->getPointeeType());
     auto converted(new autoffi::PointerType(referencedType));
-    types.emplace(clang::QualType(type, 0), converted);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
   autoffi::Type* VisitBuiltinType(const BuiltinType* type) {
-    auto match(types.find(clang::QualType(type, 0)));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     auto primKind = clangBuiltinTypeKindToTransitPrimitiveKind(type);
     auto converted(new PrimitiveType(primKind));
-    types.emplace(clang::QualType(type, 0), converted);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
   autoffi::Type* VisitQualType(const clang::QualType& qt) {
-    auto match(types.find(qt));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(qt));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     // Skip creation of qualified types where no qualifiers are present
     if (qt.hasLocalQualifiers()) {
       auto underlyingType = Visit(qt.getTypePtr());
       auto converted = new autoffi::QualType(underlyingType);
       converted->setConst(qt.isConstQualified());
       converted->setVolatile(qt.isVolatileQualified());
-      types.emplace(qt, converted);
+      types.get<TypeSeq>().push_back(TypeRepr(qt, converted));
       return converted;
     } else {
       auto converted = Visit(qt.getTypePtr());
       // NOTE: I do not have to be added to the map
-      types.emplace(qt, converted);
+      types.get<TypeSeq>().push_back(TypeRepr(qt, converted));
       return converted;
     }
   }
@@ -210,21 +239,21 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
   }
 
   autoffi::Type* VisitEnumType(const clang::EnumType* type) {
-    auto match(types.find(clang::QualType(type, 0)));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     auto decl(type->getDecl());
     auto converted = new autoffi::EnumType;
     for (auto value: decl->enumerators())
       converted->addValue(value->getNameAsString(), value->getInitVal().getLimitedValue());
-    types.emplace(clang::QualType(type, 0), converted);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
   autoffi::Type* VisitRecordType(const clang::RecordType* type) {
-    auto match(types.find(clang::QualType(type, 0)));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     auto decl(type->getDecl());
     autoffi::RecordType* converted;
     switch (decl->getTagKind()) {
@@ -243,39 +272,39 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
     }
     for (auto field: decl->fields())
       converted->addField(field->getNameAsString(), VisitQualType(field->getType()));
-    types.emplace(clang::QualType(type, 0), converted);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
   autoffi::Type* VisitBlockPointerType(const BlockPointerType* type) {
-    auto match(types.find(clang::QualType(type, 0)));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     auto referencedType = VisitQualType(type->getPointeeType());
     auto converted = new autoffi::PointerType(referencedType, autoffi::PointerType::BLOCK);
-    types.emplace(clang::QualType(type, 0), converted);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
 	autoffi::Type* VisitFunctionNoProtoType(const FunctionNoProtoType* type) {
-    auto match(types.find(clang::QualType(type, 0)));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     auto returnType = VisitQualType(type->getReturnType());
     auto converted = new autoffi::FunctionType(returnType);
-    types.emplace(clang::QualType(type, 0), converted);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
 	};
 
   autoffi::Type* VisitFunctionProtoType(const FunctionProtoType* type) {
-    auto match(types.find(clang::QualType(type, 0)));
-    if (match != types.end())
-      return match->second;
+    auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
+    if (match != types.get<ClangType>().end())
+      return match->autoffi;
     auto returnType = VisitQualType(type->getReturnType());
     auto converted = new autoffi::FunctionType(returnType);
     for (auto paramType: type->param_types())
       converted->addParamType(VisitQualType(paramType));
-    types.emplace(clang::QualType(type, 0), converted);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
@@ -540,10 +569,8 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
   for (auto& decl: Act->Decls) {
     catalog.addExport(Converter.Visit(decl));
   }
-
-  for (auto& type: Converter.typeConverter.types) {
-    catalog.addType(type.second);
-  }
+  for (auto& type: Converter.typeConverter.types.get<TypeSeq>())
+    catalog.addType(type.autoffi);
 
   return 0;
 }
