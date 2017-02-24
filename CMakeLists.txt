@@ -64,6 +64,9 @@ target_link_libraries(autoffi protobuf)
 target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
 target_link_libraries(affc autoffiClang)
 
+file(COPY vendor/libcxx/include DESTINATION "${CMAKE_BINARY_DIR}/libcxx")
+file(COPY vendor/clang/include DESTINATION "${CMAKE_BINARY_DIR}/clang")
+
 #file(GLOB TEST_FILES test/*.cpp)
 #add_executable(transitTests ${TEST_FILES})
 #target_link_libraries(transitTests transitClang gtest gtest_main)
