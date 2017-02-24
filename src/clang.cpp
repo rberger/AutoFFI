@@ -340,11 +340,12 @@ public:
     if (!loc.isValid() || loc.isInSystemHeader())
       return false;
     auto& mngr(loc.getManager());
-    for (auto header: headers) {
-      if (headerMatches(header, mngr.getFilename(loc)))
-        return true;
-    }
-    return false;
+    //for (auto header: headers) {
+      //if (headerMatches(header, mngr.getFilename(loc)))
+        //return true;
+    //}
+    //return false;
+    return !mngr.getIncludeLoc(mngr.getFileID(loc)).isValid();
   }
 
   void run(const MatchFinder::MatchResult &Result) override {
@@ -406,8 +407,8 @@ std::string GetExecutablePath(const char *Argv0) {
 using HeaderCollection = std::vector<std::string>;
 
 class EmitAutoFFIAction : public ASTFrontendAction {
-  std::set<const NamedDecl*> Decls;
 public:
+  std::set<const NamedDecl*> Decls;
   MatchFinder Finder;
   NameCollector Collector;
 
@@ -425,14 +426,14 @@ public:
 
 int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs) {
 
-  compilerArgs.push_back("-fsyntax-only");
-  StringRef execDir(llvm::sys::path::remove_leading_dotslash(llvm::sys::path::parent_path(compilerArgs[0])));
+  //StringRef execDir(llvm::sys::path::remove_leading_dotslash(llvm::sys::path::parent_path(compilerArgs[0])));
 
   // FIXME: really, there should be a more straightforward way for doing this
   //SmallString<0xfff> v(execDir);
   //std::copy(execDir.begin(), execDir.end(), std::back_inserter(v));
   //llvm::sys::fs::make_absolute(v);
 
+  compilerArgs.push_back("-fsyntax-only");
   compilerArgs.insert(compilerArgs.begin()+1, "-isystem./clang/include/");
   compilerArgs.insert(compilerArgs.begin()+1, "-isystem./libcxx/include/");
 
@@ -451,7 +452,7 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
   Driver TheDriver(Path, T.str(), Diags);
   TheDriver.setTitle("clang autoffi");
   TheDriver.setCheckInputsExist(false);
-
+  
   // FIXME: This is a hack to try to force the driver to do something we can
   // recognize. We need to extend the driver library to support this use model
   // (basically, exactly one input, and the operation mode is hard wired).
@@ -525,10 +526,23 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
     if (f.isFile())
       Inputs.push_back(f.getFile());
   }
+  for (auto& input: Inputs) std::cout << input << std::endl;
 
   std::unique_ptr<EmitAutoFFIAction> Act(new EmitAutoFFIAction(Inputs));
   if (!Clang.ExecuteAction(*Act))
     throw std::runtime_error("extraction did not succeed; see errors above");
   
-}
 
+  // convert and catalog the gathered types and exports
+  
+  NamedDeclConverter Converter;
+  for (auto& decl: Act->Decls) {
+    catalog.addExport(Converter.Visit(decl));
+  }
+
+  for (auto& type: Converter.typeConverter.types) {
+    catalog.addType(type.second);
+  }
+
+  return 0;
+}
