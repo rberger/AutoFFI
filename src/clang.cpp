@@ -1,6 +1,7 @@
 
 #include <iostream> // for debugging only
 #include <sstream>
+#include <string>
 
 #include "config.h"
 #include "AutoFFI/AST.h"
@@ -12,7 +13,13 @@
 #include "clang/AST/TypeVisitor.h"
 #include "clang/AST/DeclVisitor.h"
 #include "boost/range.hpp"
+#include "llvm/Option/ArgList.h"
 
+#include "clang/Lex/HeaderSearch.h"
+#include "clang/Lex/Preprocessor.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "Clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Tooling/Tooling.h"
@@ -24,6 +31,8 @@
 #include "clang/AST/DeclVisitor.h"
 #include "llvm/Support/Path.h"
 #include "llvm/ADT/SmallVector.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/Compilation.h"
 
 #include "boost/range.hpp"
 #include "boost/range/algorithm/copy.hpp"
@@ -108,7 +117,6 @@ PrimitiveKind clangBuiltinTypeKindToTransitPrimitiveKind(const BuiltinType* type
     LangOptions lopts;
     PrintingPolicy popts(lopts);
     throw std::runtime_error("encountered an unsupported primitive type: " + std::string(type->getNameAsCString(popts)));
-
   }
   }
 }
@@ -354,50 +362,175 @@ public:
 
 };
 
-int autoffi::ClangSourceAnalyser::analyse(std::vector<std::string> headers, std::vector<const char*> compilerArgs) {
+void Dummy() {
 
-  // do some magic to get the correct compiler args
-  static std::vector<const char*> defaultArgs DEFAULT_ARGS_INITIALIZER;
-  compilerArgs.insert(compilerArgs.begin(), "--");
-  std::copy(defaultArgs.begin(), defaultArgs.end(), std::back_inserter(compilerArgs));
-  int compilerArgsCount(compilerArgs.size());
+}
 
-  // initialize compiler database
-  auto db(FixedCompilationDatabase::loadFromCommandLine(compilerArgsCount, compilerArgs.data()));
+#include "clang/Basic/TargetInfo.h"
+#include "clang/CodeGen/CodeGenAction.h"
+#include "clang/Basic/DiagnosticOptions.h"
+#include "clang/Driver/Compilation.h"
+#include "clang/Driver/Driver.h"
+#include "clang/Driver/Tool.h"
+#include "clang/Frontend/CompilerInstance.h"
+#include "clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/FrontendDiagnostic.h"
+#include "clang/Frontend/TextDiagnosticPrinter.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ExecutionEngine/ExecutionEngine.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
+#include "llvm/IR/Module.h"
+#include "llvm/Support/FileSystem.h"
+#include "llvm/Support/Host.h"
+#include "llvm/Support/ManagedStatic.h"
+#include "llvm/Support/Path.h"
+#include "llvm/Support/TargetSelect.h"
+#include "llvm/Support/raw_ostream.h"
+#include <memory>
 
-  // resolve headers to their absolute path
-  std::vector<std::string> absoluteHeaders;
-  for (auto& header: headers) {
-    SmallString<1024> res(header);
-    llvm::sys::fs::make_absolute(res);
-    absoluteHeaders.push_back(res.str());
+//using namespace clang;
+using namespace clang::driver;
+
+// This function isn't referenced outside its translation unit, but it
+// can't use the "static" keyword because its address is used for
+// GetMainExecutable (since some platforms don't support taking the
+// address of main, and some platforms can't implement GetMainExecutable
+// without being given the address of a function in the main executable).
+std::string GetExecutablePath(const char *Argv0) {
+  // This just needs to be some symbol in the binary; C++ doesn't
+  // allow taking the address of ::main however.
+  void *MainAddr = (void*) (intptr_t) GetExecutablePath;
+  return llvm::sys::fs::getMainExecutable(Argv0, MainAddr);
+}
+
+using HeaderCollection = std::vector<std::string>;
+
+class EmitAutoFFIAction : public ASTFrontendAction {
+  std::set<const NamedDecl*> Decls;
+public:
+  HeaderCollection& Headers;
+
+  EmitAutoFFIAction(HeaderCollection& Headers): Headers(Headers) {};
+
+  std::unique_ptr<clang::ASTConsumer> CreateASTConsumer(
+      clang::CompilerInstance &Compiler, llvm::StringRef InFile) override {
+    NameCollector nameCollector(Headers, Decls);
+    MatchFinder Finder;
+    Finder.addMatcher(MyMatcher, &nameCollector);
+    return Finder.newASTConsumer();
   }
- 
-  // gather named declarations
-  ClangTool tool(*db, headers);
-  std::set<const NamedDecl*> decls;
-  NameCollector nameCollector(absoluteHeaders, decls);
-  MatchFinder Finder;
-  Finder.addMatcher(MyMatcher, &nameCollector);
-  int res(tool.run(newFrontendActionFactory(&Finder).get()));
-
-  // convert them to our local AST and insert them into the analyser
-  NamedDeclConverter declConverter;
-  for (auto decl: decls) {
-    catalog.addExport(declConverter.Visit(decl));
-  }
-  // as a side-effect of the transformation, all types were converted
-  // perform a topological sort on them
-  for (auto type: declConverter.typeConverter.types | boost::adaptors::map_values) std::cerr << type << std::endl; std::cerr << std::endl;
-  TypeSorter sorted(declConverter.typeConverter.types | boost::adaptors::map_values);
-  // and add them to the catalog, in order
-  for (auto type: sorted)
-    catalog.addType(type);
-  for (auto type: catalog.getTypes()) std::cerr << type << std::endl; std::cerr << std::endl;
-
-  // clean up some things we don't need anymore
-  delete db;
-  
-  return res;
 };
+
+#include "llvm/ProfileData/InstrProf.h"
+
+int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs) {
+
+  compilerArgs.push_back("-fsyntax-only");
+  StringRef execDir(llvm::sys::path::remove_leading_dotslash(llvm::sys::path::parent_path(compilerArgs[0])));
+
+  // FIXME: really, there should be a more straightforward way for doing this
+  //SmallString<0xfff> v(execDir);
+  //std::copy(execDir.begin(), execDir.end(), std::back_inserter(v));
+  //llvm::sys::fs::make_absolute(v);
+
+  compilerArgs.insert(compilerArgs.begin()+1, "-isystem./clang/include/");
+  compilerArgs.insert(compilerArgs.begin()+1, "-isystem./libcxx/include/");
+
+  void *MainAddr = (void*) (intptr_t) GetExecutablePath;
+  std::string Path = GetExecutablePath(compilerArgs[0]);
+  IntrusiveRefCntPtr<DiagnosticOptions> DiagOpts = new DiagnosticOptions();
+  TextDiagnosticPrinter *DiagClient =
+    new TextDiagnosticPrinter(llvm::errs(), &*DiagOpts);
+
+  IntrusiveRefCntPtr<DiagnosticIDs> DiagID(new DiagnosticIDs());
+  DiagnosticsEngine Diags(DiagID, &*DiagOpts, DiagClient);
+
+  std::string TripleStr = llvm::sys::getDefaultTargetTriple();
+  llvm::Triple T(TripleStr);
+
+  Driver TheDriver(Path, T.str(), Diags);
+  TheDriver.setTitle("clang autoffi");
+  TheDriver.setCheckInputsExist(false);
+
+  // FIXME: This is a hack to try to force the driver to do something we can
+  // recognize. We need to extend the driver library to support this use model
+  // (basically, exactly one input, and the operation mode is hard wired).
+  //SmallVector<const char *, 16> Args(argv, argv + argc);
+  //Args.push_back("--analyze");
+  std::unique_ptr<Compilation> C(TheDriver.BuildCompilation(compilerArgs));
+  if (!C)
+    throw std::runtime_error("could not create dummy compilation");
+
+  // FIXME: This is copied from ASTUnit.cpp; simplify and eliminate.
+
+  // We expect to get back exactly one command job, if we didn't something
+  // failed. Extract that job from the compilation.
+  const driver::JobList &Jobs = C->getJobs();
+  //if (Jobs.size() != 1 || !isa<driver::Command>(*Jobs.begin())) {
+    //SmallString<256> Msg;
+    //llvm::raw_svector_ostream OS(Msg);
+    //Jobs.Print(OS, "; ", true);
+    //Diags.Report(diag::err_fe_expected_compiler_job) << OS.str();
+    //return 1;
+  //}
+
+  const driver::Command &Cmd = cast<driver::Command>(*Jobs.begin());
+  std::cout << llvm::StringRef(Cmd.getCreator().getName()).str() << std::endl;
+  //if (llvm::StringRef(Cmd.getCreator().getName()) != "clang") {
+    //throw std::runtime_error("err_fe_expected_clang_command");
+    //Diags.Report(diag::err_fe_expected_clang_command);
+    //return 1;
+  //}
+
+  //// Initialize a compiler invocation object from the clang (-cc1) arguments.
+  const driver::ArgStringList &CCArgs = Cmd.getArguments();
+  for (auto& arg: CCArgs) std::cout << arg << std::endl;
+  std::unique_ptr<CompilerInvocation> CI(new CompilerInvocation);
+  CompilerInvocation::CreateFromArgs(*CI,
+                                     const_cast<const char **>(CCArgs.data()),
+                                     const_cast<const char **>(CCArgs.data()) +
+                                       CCArgs.size(),
+                                     Diags);
+
+  // Show the invocation, with -v.
+  //if (CI->getHeaderSearchOpts().Verbose) {
+    //llvm::errs() << "clang invocation:\n";
+    //Jobs.Print(llvm::errs(), "\n", true);
+
+    //llvm::errs() << "\n";
+  //}
+
+  // FIXME: This is copied from cc1_main.cpp; simplify and eliminate.
+  
+  // Create a compiler instance to handle the actual work.
+  CompilerInstance Clang;
+
+  // Infer the builtin include path if unspecified.
+  if (Clang.getHeaderSearchOpts().UseBuiltinIncludes &&
+      Clang.getHeaderSearchOpts().ResourceDir.empty())
+    Clang.getHeaderSearchOpts().ResourceDir =
+      CompilerInvocation::GetResourcesPath(compilerArgs[0], MainAddr);
+
+  //Clang.getPreprocessorOpts();
+  Clang.setInvocation(CI.release());
+  Clang.createDiagnostics();
+  std::shared_ptr<clang::TargetOptions> pto( new clang::TargetOptions());
+  pto->Triple = llvm::sys::getDefaultTargetTriple();
+  clang::TargetInfo *pti = clang::TargetInfo::CreateTargetInfo(Clang.getDiagnostics(), pto);
+  Clang.setTarget(pti);
+  Clang.createFileManager();
+  Clang.createSourceManager(Clang.getFileManager());
+  Clang.createPreprocessor(TU_Complete);
+
+  std::vector<std::string> Inputs;
+  for (FrontendInputFile& f: Clang.getFrontendOpts().Inputs) {
+    if (f.isFile())
+      Inputs.push_back(f.getFile());
+  }
+
+  std::unique_ptr<EmitAutoFFIAction> Act(new EmitAutoFFIAction(Inputs));
+  if (!Clang.ExecuteAction(*Act))
+    throw std::runtime_error("extraction did not succeed; see errors above");
+  
+}
 
