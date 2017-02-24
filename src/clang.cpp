@@ -422,20 +422,22 @@ public:
   }
 };
 
+#include <boost/filesystem.hpp>
 #include "llvm/ProfileData/InstrProf.h"
 
 int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs) {
 
-  //StringRef execDir(llvm::sys::path::remove_leading_dotslash(llvm::sys::path::parent_path(compilerArgs[0])));
+  auto exeDir(boost::filesystem::absolute(compilerArgs[0]).parent_path());
 
-  // FIXME: really, there should be a more straightforward way for doing this
-  //SmallString<0xfff> v(execDir);
-  //std::copy(execDir.begin(), execDir.end(), std::back_inserter(v));
+  //StringRef exeDir(llvm::sys::path::remove_leading_dotslash(llvm::sys::path::parent_path(compilerArgs[0])));
+
+  //// FIXME: really, there should be a more straightforward way for doing this
+  //SmallString<0xfff> v(exeDir);
   //llvm::sys::fs::make_absolute(v);
 
   compilerArgs.push_back("-fsyntax-only");
-  compilerArgs.insert(compilerArgs.begin()+1, "-isystem./clang/include/");
-  compilerArgs.insert(compilerArgs.begin()+1, "-isystem./libcxx/include/");
+  compilerArgs.insert(compilerArgs.begin()+1, ("-isystem"+boost::filesystem::relative(exeDir/"clang"/"include").string()).c_str());
+  compilerArgs.insert(compilerArgs.begin()+1, ("-isystem"+boost::filesystem::relative(exeDir/"libcxx"/"include").string()).c_str());
 
   void *MainAddr = (void*) (intptr_t) GetExecutablePath;
   std::string Path = GetExecutablePath(compilerArgs[0]);
@@ -526,7 +528,6 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
     if (f.isFile())
       Inputs.push_back(f.getFile());
   }
-  for (auto& input: Inputs) std::cout << input << std::endl;
 
   std::unique_ptr<EmitAutoFFIAction> Act(new EmitAutoFFIAction(Inputs));
   if (!Clang.ExecuteAction(*Act))
