@@ -6,7 +6,6 @@
 #include "config.h"
 #include "AutoFFI/AST.h"
 #include "AutoFFI/ClangSourceAnalyser.h"
-#include "AutoFFI/TypeSorter.h"
 
 #include "clang/AST/Decl.h"
 #include "clang/AST/Type.h"
@@ -453,10 +452,11 @@ public:
 
 #include <boost/filesystem.hpp>
 #include "llvm/ProfileData/InstrProf.h"
+#include "AutoFFI/filesystem.h"
 
 int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs) {
 
-  auto exeDir(boost::filesystem::absolute(compilerArgs[0]).parent_path());
+  auto exeDir(boost::filesystem::path(executable_path(compilerArgs[0])).parent_path());
 
   //StringRef exeDir(llvm::sys::path::remove_leading_dotslash(llvm::sys::path::parent_path(compilerArgs[0])));
 
@@ -464,10 +464,18 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
   //SmallString<0xfff> v(exeDir);
   //llvm::sys::fs::make_absolute(v);
 
+  auto libcxxDir(exeDir/"libcxx"/"include");
+  auto glibcDir(exeDir/"glibc"/"include");
+  auto clangDir(exeDir/"clang"/"include");
+
   compilerArgs.push_back("-fsyntax-only");
-  compilerArgs.insert(compilerArgs.begin()+1, ("-isystem"+boost::filesystem::relative(exeDir/"glibc"/"include").string()).c_str());
-  compilerArgs.insert(compilerArgs.begin()+1, ("-isystem"+boost::filesystem::relative(exeDir/"clang"/"include").string()).c_str());
-  compilerArgs.insert(compilerArgs.begin()+1, ("-isystem"+boost::filesystem::relative(exeDir/"libcxx"/"include").string()).c_str());
+  compilerArgs.insert(compilerArgs.begin()+1, libcxxDir.c_str());
+  compilerArgs.insert(compilerArgs.begin()+1, "-isystem");
+  compilerArgs.insert(compilerArgs.begin()+1, clangDir.c_str());
+  compilerArgs.insert(compilerArgs.begin()+1, "-isystem");
+  //compilerArgs.insert(compilerArgs.begin()+1, glibcDir.c_str());
+  //compilerArgs.insert(compilerArgs.begin()+1, "-isystem");
+
 
   void *MainAddr = (void*) (intptr_t) GetExecutablePath;
   std::string Path = GetExecutablePath(compilerArgs[0]);
