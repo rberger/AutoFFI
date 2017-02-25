@@ -13,7 +13,7 @@ class ClangSourceAnalyser {
   Catalog catalog;
 public:
   inline Catalog& getCatalog() { return catalog; }
-  int analyse(std::vector<std::string> sources, std::vector<const char*> compilerArgs = {});;
+  int analyse(std::vector<const char*> compilerArgs);;
 };
 
 }
