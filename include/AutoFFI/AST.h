@@ -12,6 +12,7 @@
 #include <boost/range.hpp>
 #include <boost/any.hpp>
 
+#include <bitset>
 #include <sstream> // for dumping
 #include <string>
 #include <vector>
@@ -121,9 +122,9 @@ struct EnumType : public Type {
 private:
   std::vector<EnumValue> values;
 public:
-  using value_range = boost::iterator_range<std::vector<EnumValue>::iterator>;
+  //using value_range = boost::iterator_range<std::vector<EnumValue>::iterator>;
   using const_value_range = boost::iterator_range<std::vector<const EnumValue>::iterator>;
-  inline value_range getValues() { return boost::make_iterator_range(values.begin(), values.end()); }
+  //inline value_range getValues() { return boost::make_iterator_range(values.begin(), values.end()); }
   inline const_value_range getValues() const { return boost::make_iterator_range(values.begin(), values.end()); }
   
   Kind getKind() const override { return ENUM; }
@@ -143,9 +144,9 @@ struct RecordField {
 class RecordType : public Type {
   std::vector<RecordField> fields;
 public:
-  using field_range = boost::iterator_range<std::vector<RecordField>::iterator>;;
+  //using field_range = boost::iterator_range<std::vector<RecordField>::iterator>;;
   using const_field_range = boost::iterator_range<std::vector<const RecordField>::iterator>;;
-  inline field_range getFields() { return boost::make_iterator_range(fields.begin(), fields.end()); } 
+  //inline field_range getFields() { return boost::make_iterator_range(fields.begin(), fields.end()); } 
   inline const_field_range getFields() const { return boost::make_iterator_range(fields.begin(), fields.end()); } 
 
   //bool hasFieldTyped(const Type* type) const;
