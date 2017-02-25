@@ -5,13 +5,15 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_CURRENT_SOURCE_DIR}/cmake/Mo
 
 project(AutoFFI CXX C)
 
-set(CMAKE_CXX_STANDARD 11)
-
 option(USE_LOCAL_PROTOBUF "Compile an embedded version of Google's protobuf library" OFF)
 option(BUILD_TESTS "Enable building test targets and executables" ON)
 
 #add_definitions(-stdlib=libc++)
 add_definitions(-flto)
+
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
+set(BUILD_SHARED_LIBS OFF)
 
 find_package(Boost REQUIRED COMPONENTS filesystem)
 find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
