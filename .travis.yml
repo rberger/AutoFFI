@@ -33,6 +33,7 @@ deploy:
   provider: releases
   api_key:
     secure: g22TCNNsDKDBE7oV0MmVqar45s0IFZw1C9V46wvMzJKd2lxuzxjZKj3BUUukwUGzoLaH5W20mT0IkHzoq1OekFselRATKCcv+ehiUbOWd+V78qMtjGf2YOTcyb2xOcI92hl1+Rt8M/EMzITJ1NB/JmKW7fUHZFDqKs4gGw+K9rbpmhFwEVcDKcxrzMd20lCoLVB3BkAHvuQ7IfZuMkn2u7yKgDcQa+jqsaItT1lGeRUYmwtxXu9+eKbUyr1JdrlP3IsFaLDhJIPhb6LP9xfG5eKc7SAGSgC7tv3EijrpQ1paZBwrMvmd2Cfk2J9Wep/uqzcqNkN00XIT6b12yak7Toa9flTu5MotV0mH2/DGi++gVjVAqgiCa9YDNXqkp2kMqg7/Z/clp+ze3NToRiXjNP8QAxd0FyapIPqQbWbSNqIFBe+R7AlFfDXteTALwGqHt2leYEhDNy2xvvRU6+mVmxq6JlqpAxUXj4tUpCqO6fngEK4hoQWV7Vlr34g41dm//aM2SFtjLyFJJ62sMSDBPwVeo75/pVHw2/tVPfF9oGUWgr/nmW/Xnb2BH/YIgVaWMoXubQz+iKJLi3COWZsPN1FsinspukSbZeHJU9waVhWi2elrUq1Yh1Ohi/QqEMvRC79eftr6nZ0IwYG0syvopBi06dBFMBhTtuzMH+KbS34=
+  skip_cleanup: true
   file:
   - autoffi-osx.zip
   - autoffi-linux.zip
