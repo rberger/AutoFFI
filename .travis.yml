@@ -37,4 +37,4 @@ deploy:
   file:
   - autoffi-${TRAVIS_OS_NAME}.zip
   on:
-    repo: AutoFFI/AutoFFI
+    tags: true
