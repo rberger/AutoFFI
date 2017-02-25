@@ -7,6 +7,7 @@ project(AutoFFI CXX C)
 
 set(CMAKE_CXX_STANDARD 11)
 
+option(USE_LOCAL_PROTOBUF "Compile an embedded version of Google's protobuf library" OFF)
 option(BUILD_TESTS "Enable building test targets and executables" ON)
 
 #add_definitions(-stdlib=libc++)
@@ -15,8 +16,11 @@ add_definitions(-flto)
 find_package(Boost REQUIRED COMPONENTS filesystem)
 find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
-find_package(protobuf REQUIRED)
-#find_package(Protobuf REQUIRED HINT "${CMAKE_CURRENT_SOURCE_DIR}/vendor/protobuf-3.1.0")
+if (USE_LOCAL_PROTOBUF)
+  add_subdirectory(vendor/protobuf/cmake)
+else()
+  find_package(protobuf REQUIRED)
+endif()
 
 include_directories(${Boost_INCLUDE_DIRS})
 
@@ -58,18 +62,20 @@ add_library(autoffi
   src/SymbolTable.cpp
   src/AST.cpp
   src/ProtoFormat.cpp
-  src/TypeSorter.cpp
   src/autoffi.pb.cc
 )
-add_library(autoffiClang src/clang.cpp)
+add_library(autoffiClang src/clang.cpp src/exepath.cpp)
 add_executable(affc src/generate.cpp)
-target_link_libraries(autoffi protobuf)
+if (USE_LOCAL_PROTOBUF)
+  target_link_libraries(autoffi libprotobuf)
+else()
+  target_link_libraries(autoffi protobuf)
+endif()
 target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(affc autoffiClang)
 
 file(COPY vendor/libcxx/include DESTINATION "${CMAKE_BINARY_DIR}/libcxx")
 file(COPY vendor/clang/include DESTINATION "${CMAKE_BINARY_DIR}/clang")
-file(COPY vendor/glibc/include DESTINATION "${CMAKE_BINARY_DIR}/glibc")
 
 #file(GLOB TEST_FILES test/*.cpp)
 #add_executable(transitTests ${TEST_FILES})
