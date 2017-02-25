@@ -465,6 +465,7 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
   //llvm::sys::fs::make_absolute(v);
 
   compilerArgs.push_back("-fsyntax-only");
+  compilerArgs.insert(compilerArgs.begin()+1, ("-isystem"+boost::filesystem::relative(exeDir/"glibc"/"include").string()).c_str());
   compilerArgs.insert(compilerArgs.begin()+1, ("-isystem"+boost::filesystem::relative(exeDir/"clang"/"include").string()).c_str());
   compilerArgs.insert(compilerArgs.begin()+1, ("-isystem"+boost::filesystem::relative(exeDir/"libcxx"/"include").string()).c_str());
 

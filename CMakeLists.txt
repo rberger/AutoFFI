@@ -12,10 +12,13 @@ option(BUILD_TESTS "Enable building test targets and executables" ON)
 #add_definitions(-stdlib=libc++)
 add_definitions(-flto)
 
+find_package(Boost REQUIRED COMPONENTS filesystem)
 find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
 find_package(protobuf REQUIRED)
 #find_package(Protobuf REQUIRED HINT "${CMAKE_CURRENT_SOURCE_DIR}/vendor/protobuf-3.1.0")
+
+include_directories(${Boost_INCLUDE_DIRS})
 
 include_directories(${CLANG_INCLUDE_DIRS})
 
@@ -61,11 +64,12 @@ add_library(autoffi
 add_library(autoffiClang src/clang.cpp)
 add_executable(affc src/generate.cpp)
 target_link_libraries(autoffi protobuf)
-target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
+target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES} ${Boost_LIBRARIES})
 target_link_libraries(affc autoffiClang)
 
 file(COPY vendor/libcxx/include DESTINATION "${CMAKE_BINARY_DIR}/libcxx")
 file(COPY vendor/clang/include DESTINATION "${CMAKE_BINARY_DIR}/clang")
+file(COPY vendor/glibc/include DESTINATION "${CMAKE_BINARY_DIR}/glibc")
 
 #file(GLOB TEST_FILES test/*.cpp)
 #add_executable(transitTests ${TEST_FILES})
