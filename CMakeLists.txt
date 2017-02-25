@@ -85,6 +85,7 @@ install(TARGETS affc RUNTIME DESTINATION bin)
 
 if (BUILD_TESTS)
   enable_testing()
-  add_test(chipmunk ./affc ../../test/assets/chipmunk/include/chipmunk/chipmunk.h)
+  add_test(example cd ../../example && make)
+  #add_test(chipmunk ./affc ../../test/assets/chipmunk/include/chipmunk/chipmunk.h)
 endif()
 
