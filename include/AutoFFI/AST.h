@@ -220,8 +220,8 @@ public:
   };
 protected:
   PointerKind pointerKind = REGULAR;
-  Type* referencedType;
 public:
+  Type* referencedType;
   inline PointerType(Type* referencedType, PointerKind pkind = REGULAR): referencedType(referencedType), pointerKind(pkind) {};
   inline bool isBlockPtr() const { return pointerKind == BLOCK; }
   inline bool isRegularPtr() const { return pointerKind == REGULAR; }

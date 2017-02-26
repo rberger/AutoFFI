@@ -185,9 +185,9 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
     auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
     if (match != types.get<ClangType>().end())
       return match->autoffi;
-    auto referencedType = VisitQualType(type->getPointeeType());
-    auto converted(new autoffi::PointerType(referencedType));
+    auto converted(new autoffi::PointerType(NULL));
     types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
+    converted->referencedType = VisitQualType(type->getPointeeType());
     return converted;
   }
 
@@ -269,9 +269,9 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
       throw std::runtime_error("cuu coo");
       return NULL; // FIXME: I am not properly handled
     }
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     for (auto field: decl->fields())
       converted->addField(field->getNameAsString(), VisitQualType(field->getType()));
-    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
