@@ -33,6 +33,7 @@
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/Compilation.h"
 
+#include <boost/filesystem.hpp>
 #include "boost/range.hpp"
 #include "boost/range/algorithm/copy.hpp"
 #include "boost/range/adaptor/map.hpp"
@@ -354,26 +355,56 @@ struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, autoffi:
 
 };
 
+// http://stackoverflow.com/a/15549954/1173521
+bool path_contains_file(boost::filesystem::path filter, boost::filesystem::path file)
+{
+  
+  // If dir ends with "/" and isn't the root directory, then the final
+  // component returned by iterators will include "." and will interfere
+  // with the std::equal check below, so we strip it before proceeding.
+  if (filter.filename() == ".")
+    filter.remove_filename();
+
+  // If filter is pointing to a single file, we just have to resolve symlinks
+  // and check if it is the same path.
+  if (filter.has_filename())
+    return boost::filesystem::canonical(filter) == boost::filesystem::canonical(file);
+
+  // We're also not interested in the file's name.
+  if (file.has_filename())
+    file.remove_filename();
+
+  // If dir has more components than file, then file can't possibly
+  // reside in dir.
+  auto dir_len = std::distance(filter.begin(), filter.end());
+  auto file_len = std::distance(file.begin(), file.end());
+  if (dir_len > file_len)
+    return false;
+
+  // This stops checking when it reaches dir.end(), so it's OK if file
+  // has more directory components afterward. They won't be checked.
+  return std::equal(filter.begin(), filter.end(), file.begin());
+}
+
 class NameCollector : public MatchFinder::MatchCallback {
 public:
   std::set<const NamedDecl*>& decls;
   std::vector<std::string>& headers;
-  NameCollector(std::vector<std::string>& headers, std::set<const NamedDecl*>& decls): headers(headers), decls(decls) {}
-
-  static bool headerMatches(std::string pattern, std::string header) {
-    return pattern == header;
-  }
+  const FilterOptions& filter;
+  NameCollector(std::vector<std::string>& headers, std::set<const NamedDecl*>& decls, const FilterOptions& filter): 
+    headers(headers), decls(decls), filter(filter) {}
 
   bool isLocationValid(const FullSourceLoc& loc) {
     if (!loc.isValid() || loc.isInSystemHeader())
       return false;
-    auto& mngr(loc.getManager());
-    //for (auto header: headers) {
-      //if (headerMatches(header, mngr.getFilename(loc)))
-        //return true;
-    //}
-    //return false;
-    return !mngr.getIncludeLoc(mngr.getFileID(loc)).isValid();
+    auto& sourceManager(loc.getManager());
+    auto locationHeader(boost::filesystem::path(sourceManager.getFilename(loc)));
+    for (auto header: filter.includes) {
+      if (path_contains_file(boost::filesystem::path(header), locationHeader))
+        return true;
+    }
+    return false;
+    //return !mngr.getIncludeLoc(mngr.getFileID(loc)).isValid();
   }
 
   void run(const MatchFinder::MatchResult &Result) override {
@@ -440,7 +471,7 @@ public:
   MatchFinder Finder;
   NameCollector Collector;
 
-  EmitAutoFFIAction(HeaderCollection& Headers): Collector(Headers, Decls) {
+  EmitAutoFFIAction(HeaderCollection& Headers, const FilterOptions& Filter): Collector(Headers, Decls, Filter) {
     Finder.addMatcher(MyMatcher, &Collector);
   }
 
@@ -450,13 +481,19 @@ public:
   }
 };
 
-#include <boost/filesystem.hpp>
 #include "llvm/ProfileData/InstrProf.h"
 #include "AutoFFI/filesystem.h"
 
-int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs) {
+int autoffi::ClangSourceAnalyser::analyse(const AnalyzeOptions& opts) {
 
-  auto exeDir(boost::filesystem::path(executable_path(compilerArgs[0])).parent_path());
+  auto& Filter(opts.filter);
+
+  auto exePath(executable_path(opts.exePath.c_str()));
+  auto exeDir(boost::filesystem::path(exePath).parent_path());
+
+  std::vector<const char*> compilerArgs { opts.exePath.c_str() };
+  std::transform(opts.compilerArgs.begin(), opts.compilerArgs.end(), 
+      std::back_inserter(compilerArgs), [](const std::string& arg) { return arg.c_str(); });
 
   //StringRef exeDir(llvm::sys::path::remove_leading_dotslash(llvm::sys::path::parent_path(compilerArgs[0])));
 
@@ -473,9 +510,6 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
   compilerArgs.insert(compilerArgs.begin()+1, "-isystem");
   compilerArgs.insert(compilerArgs.begin()+1, clangDir.c_str());
   compilerArgs.insert(compilerArgs.begin()+1, "-isystem");
-  //compilerArgs.insert(compilerArgs.begin()+1, glibcDir.c_str());
-  //compilerArgs.insert(compilerArgs.begin()+1, "-isystem");
-
 
   void *MainAddr = (void*) (intptr_t) GetExecutablePath;
   std::string Path = GetExecutablePath(compilerArgs[0]);
@@ -507,7 +541,7 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
   // We expect to get back exactly one command job, if we didn't something
   // failed. Extract that job from the compilation.
   const driver::JobList &Jobs = C->getJobs();
-  //if (Jobs.size() != 1 || !isa<driver::Command>(*Jobs.begin())) {
+	//if (Jobs.size() != 1 || !isa<driver::Command>(*Jobs.begin())) {
     //SmallString<256> Msg;
     //llvm::raw_svector_ostream OS(Msg);
     //Jobs.Print(OS, "; ", true);
@@ -515,71 +549,75 @@ int autoffi::ClangSourceAnalyser::analyse(std::vector<const char*> compilerArgs)
     //return 1;
   //}
 
-  const driver::Command &Cmd = cast<driver::Command>(*Jobs.begin());
-  if (llvm::StringRef(Cmd.getCreator().getName()) != "clang") {
-    throw std::runtime_error("err_fe_expected_clang_command");
-    Diags.Report(diag::err_fe_expected_clang_command);
-    return 1;
-  }
+	for (auto& Job: Jobs) {
 
-  //// Initialize a compiler invocation object from the clang (-cc1) arguments.
-  const driver::ArgStringList &CCArgs = Cmd.getArguments();
-  std::unique_ptr<CompilerInvocation> CI(new CompilerInvocation);
-  CompilerInvocation::CreateFromArgs(*CI,
-                                     const_cast<const char **>(CCArgs.data()),
-                                     const_cast<const char **>(CCArgs.data()) +
-                                       CCArgs.size(),
-                                     Diags);
+		const driver::Command &Cmd = cast<driver::Command>(Job);
+		if (llvm::StringRef(Cmd.getCreator().getName()) != "clang") {
+			throw std::runtime_error("err_fe_expected_clang_command");
+			Diags.Report(diag::err_fe_expected_clang_command);
+			return 1;
+		}
 
-  // Show the invocation, with -v.
-  //if (CI->getHeaderSearchOpts().Verbose) {
-    //llvm::errs() << "clang invocation:\n";
-    //Jobs.Print(llvm::errs(), "\n", true);
+		//// Initialize a compiler invocation object from the clang (-cc1) arguments.
+		const driver::ArgStringList &CCArgs = Cmd.getArguments();
+		std::unique_ptr<CompilerInvocation> CI(new CompilerInvocation);
+		CompilerInvocation::CreateFromArgs(*CI,
+																			 const_cast<const char **>(CCArgs.data()),
+																			 const_cast<const char **>(CCArgs.data()) +
+																				 CCArgs.size(),
+																			 Diags);
 
-    //llvm::errs() << "\n";
-  //}
+		// Show the invocation, with -v.
+		//if (CI->getHeaderSearchOpts().Verbose) {
+			//llvm::errs() << "clang invocation:\n";
+			//Jobs.Print(llvm::errs(), "\n", true);
 
-  // FIXME: This is copied from cc1_main.cpp; simplify and eliminate.
-  
-  // Create a compiler instance to handle the actual work.
-  CompilerInstance Clang;
+			//llvm::errs() << "\n";
+		//}
 
-  // Infer the builtin include path if unspecified.
-  if (Clang.getHeaderSearchOpts().UseBuiltinIncludes &&
-      Clang.getHeaderSearchOpts().ResourceDir.empty())
-    Clang.getHeaderSearchOpts().ResourceDir =
-      CompilerInvocation::GetResourcesPath(compilerArgs[0], MainAddr);
+		// FIXME: This is copied from cc1_main.cpp; simplify and eliminate.
+		
+		// Create a compiler instance to handle the actual work.
+		CompilerInstance Clang;
 
-  //Clang.getPreprocessorOpts();
-  Clang.setInvocation(CI.release());
-  Clang.createDiagnostics();
-  std::shared_ptr<clang::TargetOptions> pto( new clang::TargetOptions());
-  pto->Triple = llvm::sys::getDefaultTargetTriple();
-  clang::TargetInfo *pti = clang::TargetInfo::CreateTargetInfo(Clang.getDiagnostics(), pto);
-  Clang.setTarget(pti);
-  Clang.createFileManager();
-  Clang.createSourceManager(Clang.getFileManager());
-  Clang.createPreprocessor(TU_Complete);
+		// Infer the builtin include path if unspecified.
+		if (Clang.getHeaderSearchOpts().UseBuiltinIncludes &&
+				Clang.getHeaderSearchOpts().ResourceDir.empty())
+			Clang.getHeaderSearchOpts().ResourceDir =
+				CompilerInvocation::GetResourcesPath(compilerArgs[0], MainAddr);
 
-  std::vector<std::string> Inputs;
-  for (FrontendInputFile& f: Clang.getFrontendOpts().Inputs) {
-    if (f.isFile())
-      Inputs.push_back(f.getFile());
-  }
+		//Clang.getPreprocessorOpts();
+		Clang.setInvocation(CI.release());
+		Clang.createDiagnostics();
+		std::shared_ptr<clang::TargetOptions> pto( new clang::TargetOptions());
+		pto->Triple = llvm::sys::getDefaultTargetTriple();
+		clang::TargetInfo *pti = clang::TargetInfo::CreateTargetInfo(Clang.getDiagnostics(), pto);
+		Clang.setTarget(pti);
+		Clang.createFileManager();
+		Clang.createSourceManager(Clang.getFileManager());
+		Clang.createPreprocessor(TU_Complete);
 
-  std::unique_ptr<EmitAutoFFIAction> Act(new EmitAutoFFIAction(Inputs));
-  if (!Clang.ExecuteAction(*Act))
-    throw std::runtime_error("extraction did not succeed; see errors above");
-  
+		std::vector<std::string> Inputs;
+		for (FrontendInputFile& f: Clang.getFrontendOpts().Inputs) {
+			if (f.isFile())
+				Inputs.push_back(f.getFile());
+		}
 
-  // convert and catalog the gathered types and exports
-  
-  NamedDeclConverter Converter;
-  for (auto& decl: Act->Decls) {
-    catalog.addExport(Converter.Visit(decl));
-  }
-  for (auto& type: Converter.typeConverter.types.get<TypeSeq>())
-    catalog.addType(type.autoffi);
+		std::unique_ptr<EmitAutoFFIAction> Act(new EmitAutoFFIAction(Inputs, Filter));
+		if (!Clang.ExecuteAction(*Act))
+			throw std::runtime_error("extraction did not succeed; see errors above");
+		
+
+		// convert and catalog the gathered types and exports
+		
+		NamedDeclConverter Converter;
+		for (auto& decl: Act->Decls) {
+			catalog.addExport(Converter.Visit(decl));
+		}
+		for (auto& type: Converter.typeConverter.types.get<TypeSeq>())
+			catalog.addType(type.autoffi);
+
+	}
 
   return 0;
 }
