@@ -176,9 +176,9 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
     if (match != types.get<ClangType>().end())
       return match->autoffi;
     auto count = type->getSize().getLimitedValue();
-    auto elType = VisitQualType(type->getElementType());
-    auto converted(new autoffi::FixedArrayType(elType, count));
+    auto converted(new autoffi::FixedArrayType(NULL, count));
     types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
+    converted->elementType = VisitQualType(type->getElementType());;
     return converted;
   }
 
@@ -208,11 +208,11 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
       return match->autoffi;
     // Skip creation of qualified types where no qualifiers are present
     if (qt.hasLocalQualifiers()) {
-      auto underlyingType = Visit(qt.getTypePtr());
-      auto converted = new autoffi::QualType(underlyingType);
+      auto converted = new autoffi::QualType(NULL);
       converted->setConst(qt.isConstQualified());
       converted->setVolatile(qt.isVolatileQualified());
       types.get<TypeSeq>().push_back(TypeRepr(qt, converted));
+      converted->underlyingType = Visit(qt.getTypePtr());
       return converted;
     } else {
       auto converted = Visit(qt.getTypePtr());
@@ -280,9 +280,9 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
     auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
     if (match != types.get<ClangType>().end())
       return match->autoffi;
-    auto referencedType = VisitQualType(type->getPointeeType());
-    auto converted = new autoffi::PointerType(referencedType, autoffi::PointerType::BLOCK);
+    auto converted = new autoffi::PointerType(NULL, autoffi::PointerType::BLOCK);
     types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
+    converted->referencedType = VisitQualType(type->getPointeeType());
     return converted;
   }
 
@@ -290,9 +290,9 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
     auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
     if (match != types.get<ClangType>().end())
       return match->autoffi;
-    auto returnType = VisitQualType(type->getReturnType());
-    auto converted = new autoffi::FunctionType(returnType);
+    auto converted = new autoffi::FunctionType(NULL);
     types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
+    converted->returnType = VisitQualType(type->getReturnType());
     return converted;
 	};
 
@@ -300,11 +300,11 @@ struct TypeConverter : public clang::TypeVisitor<TypeConverter, autoffi::Type*> 
     auto match(types.get<ClangType>().find(clang::QualType(type, 0)));
     if (match != types.get<ClangType>().end())
       return match->autoffi;
-    auto returnType = VisitQualType(type->getReturnType());
-    auto converted = new autoffi::FunctionType(returnType);
+    auto converted = new autoffi::FunctionType(NULL);
+    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
+    converted->returnType = VisitQualType(type->getReturnType());
     for (auto paramType: type->param_types())
       converted->addParamType(VisitQualType(paramType));
-    types.get<TypeSeq>().push_back(TypeRepr(clang::QualType(type, 0), converted));
     return converted;
   }
 
@@ -483,6 +483,7 @@ public:
 
 #include "llvm/ProfileData/InstrProf.h"
 #include "AutoFFI/filesystem.h"
+#include "AutoFFI/TypeSorter.h"
 
 int autoffi::ClangSourceAnalyser::analyse(const AnalyzeOptions& opts) {
 
@@ -609,13 +610,22 @@ int autoffi::ClangSourceAnalyser::analyse(const AnalyzeOptions& opts) {
 		
 
 		// convert and catalog the gathered types and exports
+    // the types are topologically sorted
 		
 		NamedDeclConverter Converter;
 		for (auto& decl: Act->Decls) {
 			catalog.addExport(Converter.Visit(decl));
 		}
-		for (auto& type: Converter.typeConverter.types.get<TypeSeq>())
-			catalog.addType(type.autoffi);
+    std::list<autoffi::Type*> types;
+    std::transform(
+      Converter.typeConverter.types.get<TypeSeq>().begin(), 
+      Converter.typeConverter.types.get<TypeSeq>().end(),
+      std::back_inserter(types),
+      [](const TypeRepr& repr) { return repr.autoffi; }
+    );
+    TypeSorter sorted(types);
+		for (auto& type: sorted)
+			catalog.addType(type);
 
 	}
 

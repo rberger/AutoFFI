@@ -9,14 +9,14 @@ option(USE_LOCAL_PROTOBUF "Compile an embedded version of Google's protobuf libr
 option(BUILD_TESTS "Enable building test targets and executables" ON)
 
 #add_definitions(-stdlib=libc++)
-add_definitions(-flto)
+#add_definitions(-flto)
 
 set(CMAKE_CXX_STANDARD 11)
 set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(BUILD_SHARED_LIBS OFF)
 #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
-find_package(Boost REQUIRED COMPONENTS filesystem)
+find_package(Boost REQUIRED COMPONENTS filesystem program_options)
 find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
 if (USE_LOCAL_PROTOBUF)
@@ -61,6 +61,7 @@ llvm_map_components_to_libnames(LLVM_LIBRARIES all)
 add_definitions(${LLVM_DEFINITIONS})
 
 add_library(autoffi STATIC
+  src/TypeSorter.cpp
 	src/Catalog.cpp
   src/SymbolTable.cpp
   src/AST.cpp
