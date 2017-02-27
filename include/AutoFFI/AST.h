@@ -64,6 +64,8 @@ struct Type {
 
   virtual Kind getKind() const = 0;
 
+  void replace(Type* src, Type* dest);
+
   bool isStruct() const { return getKind() == STRUCT; }
   bool isUnion() const { return getKind() == UNION; }
   bool isEnum() const { return getKind() == ENUM; }
@@ -144,8 +146,8 @@ struct RecordField {
 };
 
 class RecordType : public Type {
-  std::vector<RecordField> fields;
 public:
+  std::vector<RecordField> fields;
   //using field_range = boost::iterator_range<std::vector<RecordField>::iterator>;;
   using const_field_range = boost::iterator_range<std::vector<const RecordField>::iterator>;;
   //inline field_range getFields() { return boost::make_iterator_range(fields.begin(), fields.end()); } 
@@ -176,10 +178,11 @@ public:
 };
 
 struct FunctionType : public Type {
-protected:
-  std::vector<Type*> paramTypes;
 public:
+
+  std::vector<Type*> paramTypes;
   Type* returnType;
+
   inline FunctionType(Type* returnType): returnType(returnType) {}
   using param_type_range = boost::iterator_range<std::vector<Type*>::iterator>;
   using const_param_type_range = boost::iterator_range<std::vector<const Type* const>::iterator>;
@@ -259,10 +262,12 @@ struct PrimitiveValue : public Value {
 class ExportVisitor;
 
 class Export {
+public:
+
   std::string name;
   Type* type;
   Value* value;
-public:
+
   inline Export(std::string name, Type* type, Value* value = NULL):
     name(name), type(type), value(value) {}
   inline std::string getName() const { return name; }
