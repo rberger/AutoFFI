@@ -93,9 +93,10 @@ public:
     CONST, VOLATILE
   };
 private:
-  Type* underlyingType;
   std::bitset<2> qualifiers;
 public:
+
+  Type* underlyingType;
 
   QualType(Type* underlyingType): underlyingType(underlyingType) {}
 
@@ -175,9 +176,9 @@ public:
 
 struct FunctionType : public Type {
 protected:
-  Type* returnType;
   std::vector<Type*> paramTypes;
 public:
+  Type* returnType;
   inline FunctionType(Type* returnType): returnType(returnType) {}
   using param_type_range = boost::iterator_range<std::vector<Type*>::iterator>;
   using const_param_type_range = boost::iterator_range<std::vector<const Type* const>::iterator>;
@@ -190,9 +191,8 @@ public:
 };
 
 class ArrayType : public Type {
-protected:
-  Type* elementType;
 public:
+  Type* elementType;
   inline ArrayType(Type* elType): elementType(elType) {};
   inline Type* getElementType() const { return elementType; }
 };
