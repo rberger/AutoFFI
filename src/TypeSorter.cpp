@@ -4,11 +4,30 @@
 
 namespace autoffi {
 
+struct CycleDetector : public boost::default_dfs_visitor {
+    bool& cycle;
+    CycleDetector(bool& cycle): cycle(cycle) {}
+    template <class Edge, class Graph>
+    void back_edge(Edge e, Graph& g) {
+      cycle = true;
+    }
+};
+
+template<typename Graph>
+bool has_cycles(Graph g) {
+  bool cycle = false;
+  CycleDetector cycleDetector(cycle);
+  boost::depth_first_search(g, boost::visitor(cycleDetector));
+  return cycleDetector.cycle;
+}
+
 void TypeSorter::addDependency(Type* a, Type* b) {
   auto u(getVertex(a)), v(getVertex(b));
   if (!boost::edge(u, v, g).second) {
-    //std::cerr << getVertex(a) << " " << getVertex(b) << std::endl;
-    boost::add_edge(getVertex(b), getVertex(a), g);
+    boost::add_edge(u, v, g);
+    if (has_cycles(g)) {
+      boost::remove_edge(u, v, g);
+    }
   }
 }
 
@@ -42,7 +61,7 @@ void TypeSorter::visitRecordType(RecordType* type) {
 
 void TypeSorter::sort() {
   std::deque<Graph::vertex_descriptor> sorted;
-  boost::topological_sort(g, std::front_inserter(sorted));
+  boost::topological_sort(g, std::back_inserter(sorted));
   for (auto v: sorted) {
     push_back(g[v].type);
   }
