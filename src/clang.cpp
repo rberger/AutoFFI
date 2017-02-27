@@ -135,6 +135,7 @@ struct TypeRepr {
   TypeRepr(clang::QualType clang, autoffi::Type* autoffi): clang(clang), autoffi(autoffi) {}
   clang::QualType clang;
   autoffi::Type* autoffi;
+  bool dangling = false;
 };
 
 typedef multi_index_container<
@@ -314,43 +315,81 @@ struct ValueConverter {
 
 };
 
+using ExportList = std::list<Export*>;
+
+struct make_dangling {
+  void operator()(TypeRepr& repr) {
+    repr.dangling = true;
+  }
+};
+
 /**
  * Converts a named declaration to a Transit symbol export.
  */
-struct NamedDeclConverter : public ConstDeclVisitor<NamedDeclConverter, autoffi::Export*> {
+struct ExportCollector : public ConstDeclVisitor<ExportCollector> {
 
   TypeConverter typeConverter;
   ValueConverter valueConverter;
+  ExportList exports;
 
-  autoffi::Export* VisitTypedefDecl(const TypedefDecl* decl) {
-    auto name = decl->getNameAsString();
-    auto type = typeConverter.VisitQualType(decl->getUnderlyingType());
-    return new autoffi::Export(name, type);
+  void replaceType(autoffi::Type* src, autoffi::Type* dest) {
+
+    for (auto& ex: exports) {
+      if (ex->type == src) {
+        ex->type = dest;
+      }
+    }
+
+    auto& typeSeq(typeConverter.types.get<TypeSeq>());
+    for (auto it = typeSeq.begin(); it != typeSeq.end(); ++it) {
+      auto& repr = *it;
+      if (repr.autoffi == src) {
+        typeSeq.modify(it, make_dangling());
+      } else {
+        TypeRepr newRepr(repr.clang, repr.autoffi);
+        newRepr.autoffi->replace(src, dest);
+        typeSeq.replace(it, newRepr);
+      }
+    }
   }
 
-  autoffi::Export* VisitFunctionDecl(const FunctionDecl* decl) {
+  void VisitTypedefDecl(const TypedefDecl* decl) {
+    auto name = decl->getNameAsString();
+    auto type = typeConverter.VisitQualType(decl->getUnderlyingType());
+    exports.push_back(new autoffi::Export(name, type));
+  }
+
+  void VisitFunctionDecl(const FunctionDecl* decl) {
     auto name = decl->getNameAsString();
     auto type = typeConverter.VisitQualType(decl->getType());
-    return new autoffi::Export(name, type);
+    exports.push_back(new autoffi::Export(name, type));
   };
 
-  autoffi::Export* VisitVarDecl(const VarDecl* decl) {
+  void VisitVarDecl(const VarDecl* decl) {
     auto name = decl->getNameAsString();
     auto type = typeConverter.VisitQualType(decl->getType());
     //auto value = new autoffi::Primti;
-    return new autoffi::Export(name, type);
+    exports.push_back(new autoffi::Export(name, type));
   }
 
-  autoffi::Export* VisitRecordDecl(const RecordDecl* decl) {
+  void VisitRecordDecl(const RecordDecl* decl) {
+
     auto name = decl->getNameAsString();
     auto type = typeConverter.Visit(decl->getTypeForDecl());
-    return new autoffi::Export(name, type);
+
+    if (!decl->isFirstDecl()) {
+      auto prev(decl->getPreviousDecl());
+      auto prevType = typeConverter.Visit(prev->getTypeForDecl());
+      replaceType(prevType, type);
+    }
+
+    exports.push_back(new autoffi::Export(name, type));
   }
 
-  autoffi::Export* VisitEnumDecl(const EnumDecl* decl) {
+  void VisitEnumDecl(const EnumDecl* decl) {
     auto name = decl->getNameAsString();
     auto type = typeConverter.Visit(decl->getTypeForDecl());
-    return new autoffi::Export(name, type);
+    exports.push_back(new autoffi::Export(name, type));
   }
 
 };
@@ -465,13 +504,13 @@ std::string GetExecutablePath(const char *Argv0) {
 
 using HeaderCollection = std::vector<std::string>;
 
-class EmitAutoFFIAction : public ASTFrontendAction {
+class GatherDeclsAction : public ASTFrontendAction {
 public:
   std::set<const NamedDecl*> Decls;
   MatchFinder Finder;
   NameCollector Collector;
 
-  EmitAutoFFIAction(HeaderCollection& Headers, const FilterOptions& Filter): Collector(Headers, Decls, Filter) {
+  GatherDeclsAction(HeaderCollection& Headers, const FilterOptions& Filter): Collector(Headers, Decls, Filter) {
     Finder.addMatcher(MyMatcher, &Collector);
   }
 
@@ -598,32 +637,31 @@ int autoffi::ClangSourceAnalyser::analyse(const AnalyzeOptions& opts) {
 		Clang.createSourceManager(Clang.getFileManager());
 		Clang.createPreprocessor(TU_Complete);
 
-		std::vector<std::string> Inputs;
+    std::vector<std::string> Inputs;
 		for (FrontendInputFile& f: Clang.getFrontendOpts().Inputs) {
 			if (f.isFile())
 				Inputs.push_back(f.getFile());
 		}
 
-		std::unique_ptr<EmitAutoFFIAction> Act(new EmitAutoFFIAction(Inputs, Filter));
+		std::unique_ptr<GatherDeclsAction> Act(new GatherDeclsAction(Inputs, Filter));
 		if (!Clang.ExecuteAction(*Act))
 			throw std::runtime_error("extraction did not succeed; see errors above");
-		
-
+	
 		// convert and catalog the gathered types and exports
     // the types are topologically sorted
 		
-		NamedDeclConverter Converter;
-		for (auto& decl: Act->Decls) {
-			catalog.addExport(Converter.Visit(decl));
-		}
+		ExportCollector Collector;
+		for (auto& decl: Act->Decls)
+			Collector.Visit(decl);
+    
     std::list<autoffi::Type*> types;
-    std::transform(
-      Converter.typeConverter.types.get<TypeSeq>().begin(), 
-      Converter.typeConverter.types.get<TypeSeq>().end(),
-      std::back_inserter(types),
-      [](const TypeRepr& repr) { return repr.autoffi; }
-    );
+    for (auto& repr: Collector.typeConverter.types.get<TypeSeq>())
+      if (!repr.dangling)
+        types.push_back(repr.autoffi);
     TypeSorter sorted(types);
+
+    for (auto& ex: Collector.exports)
+      catalog.addExport(ex);
 		for (auto& type: sorted)
 			catalog.addType(type);
 
@@ -631,3 +669,4 @@ int autoffi::ClangSourceAnalyser::analyse(const AnalyzeOptions& opts) {
 
   return 0;
 }
+
