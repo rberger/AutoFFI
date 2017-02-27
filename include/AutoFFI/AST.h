@@ -13,9 +13,10 @@
 #include <boost/any.hpp>
 
 #include <bitset>
-#include <sstream> // for dumping
 #include <string>
 #include <vector>
+#include <iostream> // for debugging
+#include <sstream> // for dumping
 
 namespace autoffi {
 
@@ -298,21 +299,21 @@ struct TypeVisitor {
   }
   
   R visitType(Type* type) { };
-  R visitEnumType(EnumType* type) { return visitType(type); }
-  R visitQualType(QualType* type) { return visitType(type); }
-  R visitArrayType(ArrayType* type) { return visitType(type); }
-  R visitRecordType(RecordType* type) { return visitType(type); }
-  R visitPointerType(PointerType* type) { return visitType(type); }
-  R visitFunctionType(FunctionType* type) { return visitType(type); }
-  R visitUnionType(RecordType* type) { return visitRecordType(type); }
-  R visitStructType(RecordType* type) { return visitRecordType(type); }
-  R visitPrimitiveType(PrimitiveType* type) { return visitType(type); }
-  R visitFixedArrayType(FixedArrayType* type) { return visitArrayType(type); }
+  R visitEnumType(EnumType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitQualType(QualType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitArrayType(ArrayType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitRecordType(RecordType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitPointerType(PointerType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitFunctionType(FunctionType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitUnionType(UnionType* type) { return static_cast<Derived*>(this)->visitRecordType(type); }
+  R visitStructType(StructType* type) { return static_cast<Derived*>(this)->visitRecordType(type); }
+  R visitPrimitiveType(PrimitiveType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitFixedArrayType(FixedArrayType* type) { return static_cast<Derived*>(this)->visitArrayType(type); }
   R visitVariadicArrayType(VariadicArrayType* type) { return visitArrayType(type); }
 
 };
 
-// FIXME: there should be a standard way to remove this code duplication
+// FIXME: we should get rid of this duplication using some template mumbo-jumbo
 template<typename Derived, typename R = void>
 struct ConstTypeVisitor {
 
@@ -340,17 +341,17 @@ struct ConstTypeVisitor {
   }
   
   R visitType(const Type* type) { };
-  R visitEnumType(const EnumType* type) { return visitType(type); }
-  R visitQualType(const QualType* type) { return visitType(type); }
-  R visitArrayType(const ArrayType* type) { return visitType(type); }
-  R visitRecordType(const RecordType* type) { return visitType(type); }
-  R visitPointerType(const PointerType* type) { return visitType(type); }
-  R visitFunctionType(const FunctionType* type) { return visitType(type); }
-  R visitUnionType(const UnionType* type) { return visitRecordType(type); }
-  R visitStructType(const StructType* type) { return visitRecordType(type); }
-  R visitPrimitiveType(const PrimitiveType* type) { return visitType(type); }
-  R visitFixedArrayType(const FixedArrayType* type) { return visitArrayType(type); }
-  R visitVariadicArrayType(const VariadicArrayType* type) { return visitArrayType(type); }
+  R visitEnumType(const EnumType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitQualType(const QualType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitArrayType(const ArrayType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitRecordType(const RecordType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitPointerType(const PointerType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitFunctionType(const FunctionType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitUnionType(const UnionType* type) { return static_cast<Derived*>(this)->visitRecordType(type); }
+  R visitStructType(const StructType* type) { return static_cast<Derived*>(this)->visitRecordType(type); }
+  R visitPrimitiveType(const PrimitiveType* type) { return static_cast<Derived*>(this)->visitType(type); }
+  R visitFixedArrayType(const FixedArrayType* type) { return static_cast<Derived*>(this)->visitArrayType(type); }
+  R visitVariadicArrayType(const VariadicArrayType* type) { return static_cast<Derived*>(this)->visitArrayType(type); }
 
 };
 
