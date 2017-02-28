@@ -7,4 +7,4 @@ configuration: Release
 build:
   parallel: true
   project: vs2015/AutoFFI.sln
-  erbosity: detailed
+  verbosity: detailed
