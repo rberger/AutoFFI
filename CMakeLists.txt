@@ -88,8 +88,12 @@ file(COPY vendor/clang/include DESTINATION "${CMAKE_BINARY_DIR}/clang")
 install(TARGETS affc RUNTIME DESTINATION bin)
 
 if (BUILD_TESTS)
+  add_executable(ast_tests test/ast.cpp)
+  add_subdirectory(vendor/googletest/googletest/)
+  target_link_libraries(ast_tests gtest gtest_main autoffi)
   enable_testing()
-  add_test(example cd ../../example && make)
+  add_test(ast ast_tests)
+  #add_test(example "cd ../../example && make")
   #add_test(chipmunk ./affc ../../test/assets/chipmunk/include/chipmunk/chipmunk.h)
 endif()
 
