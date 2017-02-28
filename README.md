@@ -1,7 +1,7 @@
 AutoFFI
 =======
 
-[![Travis CI](https://travis-ci.org/AutoFFI/AutoFFI.svg?branch=master)](https://travis-ci.org/AutoFFI/AutoFFI) [![AppVeyor](https://ci.appveyor.com/project/samvv/autoffi/branch/master)](https://ci.appveyor.com/project/samvv/autoffi)
+[![Travis CI](https://travis-ci.org/AutoFFI/AutoFFI.svg?branch=master)](https://travis-ci.org/AutoFFI/AutoFFI) [![Build status](https://ci.appveyor.com/api/projects/status/9qug08mj43f6ytm9?svg=true)](https://ci.appveyor.com/project/samvv/autoffi)
 
 AutoFFI is a way to call compiled code from higher-level languages, such as
 scripting languages. This repository contains the compiler which compiles
