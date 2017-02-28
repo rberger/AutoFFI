@@ -17,6 +17,17 @@ set(CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_STATIC_LIBRARY_SUFFIX})
 set(BUILD_SHARED_LIBS OFF)
 #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
+function(diag_command cmd cwd)
+  execute_process(
+    COMMAND "${cmd}" 
+    WORKING_DIRECTORY "${cwd}"
+    OUTPUT_VARIABLE foo ERROR_VARIABLE foo RESULT_VARIABLE res
+  )
+  if (NOT "${res}" EQUAL 0)
+    message("Could not execute ${cmd}: ${res}")
+  endif()
+endfunction()
+
 find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
 if (USE_LOCAL_PROTOBUF)
@@ -25,8 +36,6 @@ else()
   find_package(protobuf REQUIRED)
 endif()
 if (USE_LOCAL_BOOST)
-  execute_process(COMMAND ./bootstrap.sh WORKING_DIR vendor/boost/tools/build)
-  execute_process(COMMAND ./tools/build/b2 install --prefix=out/ --with-filesystem --with-program_options WORKING_DIR vendor/boost/)
   link_directories(vendor/boost/out/lib)
   include_directories(vendor/boost/out/include)
 else()
