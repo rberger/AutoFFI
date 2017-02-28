@@ -1,0 +1,10 @@
+install:
+  - pm: Install-Package CMake
+  - pm: Install-Package boost
+before_build:
+  - cmd: mkdir vs2015 && cd vs2015 && cmake -G "Visual Studio 15 Win64"
+configuration: Release
+build:
+  parallel: true
+  project: vs2015/AutoFFI.sln
+  erbosity: detailed
