@@ -37,13 +37,17 @@ int main(int argc, const char* argv[]) {
     notify(vm);
     std::vector<std::string> compilerArgs = collect_unrecognized(parsed.options, include_positional);
 
-    auto& includes (vm["include"].as<std::vector<std::string>>());
-    auto& excludes (vm["exclude"].as<std::vector<std::string>>());
+    if (vm["include"].empty()) {
+      std::cerr << "Warning: you provided no inclusion filters. This will result in an empty AST being generated. Usually, this is not what you want." << std::endl;
+    }
+
     AnalyzeOptions analyzeOpts;
     analyzeOpts.exePath = argv[0];
     analyzeOpts.compilerArgs = compilerArgs;
-    analyzeOpts.filter.includes = includes;
-    analyzeOpts.filter.excludes = excludes;
+    if (!vm["include"].empty())
+      analyzeOpts.filter.includes = vm["include"].as<std::vector<std::string>>();
+    if (!vm["exclude"].empty())
+      analyzeOpts.filter.excludes = vm["exclude"].as<std::vector<std::string>>();
     ClangSourceAnalyser a;
     if (int res = a.analyse(analyzeOpts))
       return res;

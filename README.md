@@ -34,7 +34,7 @@ $ brew install autoffi
 ## Usage
 
 ```
-$ affc myprog.c --include myprog.c --exclude > api.json
+$ affc myprog.c --include myprog.c > api.json
 ```
 
 Generates a special AST from a set of sources. For more information, read the
