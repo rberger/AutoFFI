@@ -34,11 +34,16 @@ $ brew install autoffi
 ## Usage
 
 ```
-$ affc -json myprog.c > api.json
+$ affc myprog.c --include myprog.c --exclude > api.json
 ```
 
 Generates a special AST from a set of sources. For more information, read the
 [example](http://github.com/AutoFFI/AutoFFI/tree/master/example/).
+
+Options:
+
+ - **include:** one or more paths of which the resulting AST will be generated
+ - **exclude:** one or more path that will not be included in the generated AST
 
 ## Limitations
 
