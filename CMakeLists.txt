@@ -40,9 +40,8 @@ if (USE_LOCAL_BOOST)
   include_directories(vendor/boost/out/include)
 else()
   find_package(Boost REQUIRED COMPONENTS filesystem program_options)
+  include_directories(${Boost_INCLUDE_DIRS})
 endif()
-
-include_directories(${Boost_INCLUDE_DIRS})
 
 include_directories(${CLANG_INCLUDE_DIRS})
 
@@ -97,6 +96,7 @@ target_link_libraries(affc autoffiClang)
 
 file(COPY vendor/libcxx/include DESTINATION "${CMAKE_BINARY_DIR}/libcxx")
 file(COPY vendor/clang/include DESTINATION "${CMAKE_BINARY_DIR}/clang")
+add_custom_target(zip zip -r autoffi.zip affc libcxx clang DEPENDS affc)
 
 #file(GLOB TEST_FILES test/*.cpp)
 #add_executable(transitTests ${TEST_FILES})
