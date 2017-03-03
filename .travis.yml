@@ -15,8 +15,9 @@ matrix:
     install:
     - sudo apt-get update
     - sudo apt-get install -y --only-upgrade cmake
-    - sudo apt-get install -y clang-3.9-dev llvm-3.9-dev 
-    - wget "https://downloads.sourceforge.net/project/boost/boost/1.63.0/boost_1_63_0.tar.gz?r=https%3A%2F%2Fsourceforge.net%2Fprojects%2Fboost%2Ffiles%2Fboost%2F1.63.0%2F&ts=1488300925&use_mirror=netcologne" -O boost.tar.gz && tar -xf boost.tar.gz --directory vendor/ && mv vendor/{boost_1_63_0,boost} && cd vendor/boost/tools/build && ./bootstrap.sh && cd ../../ && ./tools/build/b2 install -d0 --prefix=out/ --with-filesystem --with-program_options
+    - sudo apt-get install -y clang-3.9 libclang-3.9-dev llvm-3.9-dev 
+    - scripts/install_boost.sh . 
+    - scripts/default_llvm.sh
   - os: osx
     osx_image: xcode8.2
     install:
@@ -26,10 +27,8 @@ matrix:
 script:
 - mkdir -p build/Release && cd build/Release
 - if [[ "$TRAVIS_OS_NAME" == "osx" ]]; then cmake ../../ -DCMAKE_BUILD_TYPE=Release; fi
-- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cmake ../../ -DCMAKE_BUILD_TYPE=Release -DUSE_LOCAL_PROTOBUF=ON -DUSE_LOCAL_BOOST=ON; fi
-- make
-- make test
-- zip -r autoffi-${TRAVIS_OS_NAME}.zip affc libcxx clang
+- if [[ "$TRAVIS_OS_NAME" == "linux" ]]; then cmake ../../ -DCMAKE_CXX_COMPILER=/usr/bin/clang -DCMAKE_BUILD_TYPE=Release -DUSE_LOCAL_PROTOBUF=ON -DUSE_LOCAL_BOOST=ON; fi
+- make && make test && zip -r autoffi-${TRAVIS_OS_NAME}.zip affc libcxx clang
 deploy:
   provider: releases
   api_key:
