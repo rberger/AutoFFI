@@ -16,17 +16,6 @@ set(CMAKE_CXX_STANDARD 11)
 set(BUILD_SHARED_LIBS OFF)
 #set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static")
 
-function(diag_command cmd cwd)
-  execute_process(
-    COMMAND "${cmd}" 
-    WORKING_DIRECTORY "${cwd}"
-    OUTPUT_VARIABLE foo ERROR_VARIABLE foo RESULT_VARIABLE res
-  )
-  if (NOT "${res}" EQUAL 0)
-    message("Could not execute ${cmd}: ${res}")
-  endif()
-endfunction()
-
 find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
 find_package(Protobuf REQUIRED)
