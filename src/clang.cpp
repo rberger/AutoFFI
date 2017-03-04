@@ -3,7 +3,6 @@
 #include <sstream>
 #include <string>
 
-#include "config.h"
 #include "AutoFFI/AST.h"
 #include "AutoFFI/ClangSourceAnalyser.h"
 

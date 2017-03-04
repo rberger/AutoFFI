@@ -4,7 +4,6 @@
 #include <string.h>
 #include <vector>
 
-#include "config.h"
 #include "AutoFFI/Analyser.h"
 
 //#include "llvm/Support/raw_ostream.h"
