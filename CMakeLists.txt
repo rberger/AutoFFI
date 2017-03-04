@@ -38,6 +38,7 @@ endif()
 if (USE_LOCAL_BOOST)
   link_directories(vendor/boost/out/lib)
   include_directories(vendor/boost/out/include)
+  set(Boost_LIBRARIES boost_filesystem boost_system boost_program_options)
 else()
   find_package(Boost REQUIRED COMPONENTS filesystem program_options)
   include_directories(${Boost_INCLUDE_DIRS})
@@ -76,6 +77,8 @@ include_directories(include/)
 llvm_map_components_to_libnames(LLVM_LIBRARIES all)
 add_definitions(${LLVM_DEFINITIONS})
 
+set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--start-group")
+
 add_library(autoffi STATIC
   src/TypeSorter.cpp
 	src/Catalog.cpp
@@ -91,8 +94,8 @@ if (USE_LOCAL_PROTOBUF)
 else()
   target_link_libraries(autoffi protobuf)
 endif()
-target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES} ${Boost_LIBRARIES})
-target_link_libraries(affc autoffiClang)
+target_link_libraries(autoffiClang autoffi )
+target_link_libraries(affc autoffiClang ${Boost_LIBRARIES} ${CLANG_LIBRARIES} ${LLVM_LIBRARIES} autoffiClang)
 
 file(COPY vendor/libcxx/include DESTINATION "${CMAKE_BINARY_DIR}/libcxx")
 file(COPY vendor/clang/include DESTINATION "${CMAKE_BINARY_DIR}/clang")

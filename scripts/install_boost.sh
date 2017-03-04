@@ -7,4 +7,3 @@ wget $BOOST_ARCHIVE_URL -O "$DIR/boost.tar.gz" -N \
   && tar -xf "$DIR/boost.tar.gz" --strip 1 --directory "$BOOST_DIR"  \
   && cd "$BOOST_DIR/tools/build" && ./bootstrap.sh \
   && cd ../../ && ./tools/build/b2 install -d0 --prefix=out/ --with-filesystem --with-program_options
-rm -rf "$DIR/boost.tar.gz"

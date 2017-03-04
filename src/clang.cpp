@@ -17,7 +17,7 @@
 #include "clang/Lex/HeaderSearch.h"
 #include "clang/Lex/Preprocessor.h"
 #include "clang/Frontend/CompilerInstance.h"
-#include "Clang/Frontend/CompilerInvocation.h"
+#include "clang/Frontend/CompilerInvocation.h"
 #include "clang/Frontend/TextDiagnosticPrinter.h"
 #include "llvm/Support/raw_ostream.h"
 #include "clang/Frontend/FrontendAction.h"
@@ -126,7 +126,7 @@ PrimitiveKind clangBuiltinTypeKindToTransitPrimitiveKind(const BuiltinType* type
 #include <boost/multi_index/sequenced_index.hpp>
 #include <boost/multi_index/ordered_index.hpp>
 
-using namespace boost::multi_index;
+namespace mi = boost::multi_index;
 
 struct ClangType {};
 struct TypeSeq {};
@@ -138,13 +138,13 @@ struct TypeRepr {
   bool dangling = false;
 };
 
-typedef multi_index_container<
+typedef mi::multi_index_container<
   TypeRepr,
-  indexed_by<
-    sequenced < tag <TypeSeq > >,
-    ordered_unique< 
-      tag<ClangType>, 
-      member < TypeRepr, clang::QualType, &TypeRepr::clang >,
+  mi::indexed_by<
+    mi::sequenced < mi::tag <TypeSeq > >,
+    mi::ordered_unique< 
+      mi::tag<ClangType>, 
+      mi::member< TypeRepr, clang::QualType, &TypeRepr::clang >,
       ClangQualTypeLT
     >
   > 

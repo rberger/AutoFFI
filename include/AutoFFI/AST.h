@@ -126,10 +126,11 @@ struct EnumType : public Type {
 private:
   std::vector<EnumValue> values;
 public:
-  //using value_range = boost::iterator_range<std::vector<EnumValue>::iterator>;
-  using const_value_range = boost::iterator_range<std::vector<const EnumValue>::iterator>;
-  //inline value_range getValues() { return boost::make_iterator_range(values.begin(), values.end()); }
-  inline const_value_range getValues() const { return boost::make_iterator_range(values.begin(), values.end()); }
+  //using value_range = boost::iterator_range<std::vector<EnumValue*>::iterator>;
+  //using const_value_range = boost::iterator_range<std::vector<EnumValue*>::const_iterator>;
+  inline std::vector<EnumValue>& getValues() { return values; }
+  inline const std::vector<EnumValue>& getValues() const { return values; }
+  //inline const_value_range getValues() const { return boost::make_iterator_range(values.begin(), values.end()); }
   
   Kind getKind() const override { return ENUM; }
 
@@ -148,10 +149,11 @@ struct RecordField {
 class RecordType : public Type {
 public:
   std::vector<RecordField> fields;
-  //using field_range = boost::iterator_range<std::vector<RecordField>::iterator>;;
-  using const_field_range = boost::iterator_range<std::vector<const RecordField>::iterator>;;
-  //inline field_range getFields() { return boost::make_iterator_range(fields.begin(), fields.end()); } 
-  inline const_field_range getFields() const { return boost::make_iterator_range(fields.begin(), fields.end()); } 
+  //using field_range = boost::iterator_range<std::vector<RecordField*>::iterator>;;
+  //using const_field_range = const boost::iterator_range<std::vector<RecordField*>::const_iterator>;;
+  inline std::vector<RecordField>& getFields() { return fields; } 
+  inline const std::vector<RecordField>& getFields() const { return fields; } 
+  //inline const_field_range getFields() const { return boost::make_iterator_range(fields.begin(), fields.end()); } 
 
   //bool hasFieldTyped(const Type* type) const;
   //bool hasFieldNamed(const std::string name) const;
@@ -184,10 +186,11 @@ public:
   Type* returnType;
 
   inline FunctionType(Type* returnType): returnType(returnType) {}
-  using param_type_range = boost::iterator_range<std::vector<Type*>::iterator>;
-  using const_param_type_range = boost::iterator_range<std::vector<const Type* const>::iterator>;
-  inline param_type_range getParamTypes() { return boost::make_iterator_range(paramTypes.begin(), paramTypes.end()); }
-  inline const_param_type_range getParamTypes() const { return boost::make_iterator_range(paramTypes.begin(), paramTypes.end()); }
+  //using param_type_range = boost::iterator_range<std::vector<Type*>::iterator>;
+  //using const_param_type_range = boost::iterator_range<std::vector<Type*>::const_iterator>;
+  inline std::vector<Type*>& getParamTypes() { return paramTypes; }
+  inline const std::vector<Type*>& getParamTypes() const { return paramTypes; }
+  //inline const_param_type_range getParamTypes() const { return boost::make_iterator_range(paramTypes.begin(), paramTypes.end()); }
   inline Type* getReturnType() const { return returnType; }
   void addParamType(Type* paramType);
   Kind getKind() const override { return FUNCTION; }

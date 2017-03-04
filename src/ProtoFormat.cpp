@@ -72,7 +72,7 @@ struct TypeToMessageConverter : public ConstTypeVisitor<TypeToMessageConverter> 
     auto message(c.add_type());
     message->set_id(index.getID(type));
     message->set_kind(proto::TypeKind::ENUM);
-    for (auto value: type->getValues()) { 
+    for (auto& value: type->getValues()) { 
       auto valueMessage = message->add_value();
       valueMessage->set_name(value.name);
       valueMessage->set_value(value.value);
