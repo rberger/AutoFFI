@@ -6,4 +6,4 @@ wget $BOOST_ARCHIVE_URL -O "$DIR/boost.tar.gz" -N \
   && mkdir -p "$BOOST_DIR" \
   && tar -xf "$DIR/boost.tar.gz" --strip 1 --directory "$BOOST_DIR"  \
   && cd "$BOOST_DIR/tools/build" && ./bootstrap.sh \
-  && cd ../../ && ./tools/build/b2 install -d0 --prefix=out/ --with-filesystem --with-program_options
+  && cd ../../ && sudo ./tools/build/b2 install -d0 --prefix=/usr/local --with-filesystem --with-program_options

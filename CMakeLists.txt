@@ -27,7 +27,9 @@ llvm_map_components_to_libnames(LLVM_LIBRARIES all)
 include_directories(${CLANG_INCLUDE_DIRS})
 add_definitions(${LLVM_DEFINITIONS})
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--start-group")
+if(CMAKE_COMPILER_IS_GNUCC)
+  set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--start-group")
+endif()
 
 add_executable(affc src/generate.cpp)
 

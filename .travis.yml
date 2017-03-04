@@ -13,8 +13,9 @@ matrix:
     install:
     - sudo apt-get update
     - sudo apt-get install -y --only-upgrade cmake
-    - sudo apt-get install -y clang-3.9 libclang-3.9-dev libz-dev libedit-dev libboost-{filesystem,program-options}-dev 
-    - ./scripts/install_protobuf.sh
+    - sudo apt-get install -y clang-3.9 libclang-3.9-dev libz-dev libedit-dev
+    - ./scripts/install_boost.sh
+    - ./scripts/install_protobuf.sh .
   - os: osx
     osx_image: xcode8.2
     install:
@@ -22,7 +23,7 @@ matrix:
     - brew link llvm --overwrite --force
     - brew install protobuf
 script:
-- protoc --cpp_out=src/ autoffi.proto && mkdir -p build/Release && cd build/Release && cmake ../../ -DCMAKE_BUILD_TYPE=Release && make affc && make test && zip -r autoffi-${TRAVIS_OS_NAME}.zip affc libcxx clang
+- protoc --cpp_out=src/ autoffi.proto && mkdir -p build/Release && cd build/Release && cmake ../../ -DCMAKE_BUILD_TYPE=Release && make affc && zip -r autoffi-${TRAVIS_OS_NAME}.zip affc libcxx clang
 deploy:
   provider: releases
   api_key:
