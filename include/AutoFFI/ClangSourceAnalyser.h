@@ -9,9 +9,16 @@
 
 namespace autoffi {
 
+enum SymbolVisibility {
+  PUBLIC = 0, 
+  PROTECTED = 1,
+  HIDDEN = 2,
+};
+
 struct FilterOptions {
   std::vector<std::string> includes;
   std::vector<std::string> excludes;
+  SymbolVisibility visibilityLevel = PUBLIC;
 };
 
 struct AnalyzeOptions {

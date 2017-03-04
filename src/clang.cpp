@@ -424,6 +424,17 @@ bool path_contains_file(boost::filesystem::path filter, boost::filesystem::path 
   return std::equal(filter.begin(), filter.end(), file.begin());
 }
 
+bool visibilityMatches(clang::Visibility vis, autoffi::SymbolVisibility level) {
+  switch (vis) {
+  case DefaultVisibility:
+    return true;
+  case ProtectedVisibility:
+    return level == autoffi::PROTECTED || level == autoffi::HIDDEN;
+  case HiddenVisibility:
+    return level == autoffi::HIDDEN;
+  }
+}
+
 class NameCollector : public MatchFinder::MatchCallback {
 public:
   std::set<const NamedDecl*>& decls;
@@ -449,7 +460,7 @@ public:
     auto& sourceManager(Result.Context->getSourceManager());
     const NamedDecl* decl = Result.Nodes.getNodeAs<NamedDecl>("ndecl");
     if (decl) { 
-      if (!decl->isImplicit()) {
+      if (!decl->isImplicit() && visibilityMatches(decl->getVisibility(), filter.visibilityLevel)) {
         FullSourceLoc fullSourceLoc(decl->getLocation(), sourceManager);
         if (isLocationValid(fullSourceLoc)) {
           decls.emplace(decl);

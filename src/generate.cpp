@@ -29,6 +29,8 @@ int main(int argc, const char* argv[]) {
   try {
     options_description desc("Options");   
     desc.add_options()
+      ("include-hidden",bool_switch()->default_value(false),"Also export symbols that are marked 'hidden'")
+      ("include-protected",bool_switch()->default_value(false),"Also export symbols that are marked 'protected'")
       ("include",value<std::vector<std::string>>()->multitoken()->zero_tokens(), "Include exported members from the given file")
       ("exclude",value<std::vector<std::string>>()->multitoken()->zero_tokens(), "Exclude exported members from the given file");
     variables_map vm;
@@ -42,6 +44,10 @@ int main(int argc, const char* argv[]) {
     }
 
     AnalyzeOptions analyzeOpts;
+    if (!vm["include-protected"].empty() && vm["include-protected"].as<bool>())
+      analyzeOpts.filter.visibilityLevel = PROTECTED;
+    if (!vm["include-hidden"].empty() && vm["include-hidden"].as<bool>())
+      analyzeOpts.filter.visibilityLevel = HIDDEN;
     analyzeOpts.exePath = argv[0];
     analyzeOpts.compilerArgs = compilerArgs;
     if (!vm["include"].empty())
