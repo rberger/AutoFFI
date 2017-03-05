@@ -19,7 +19,7 @@ set(BUILD_SHARED_LIBS OFF)
 find_package(LLVM 3.9.1 REQUIRED CONFIG HINTS /usr/local/opt)
 find_package(Clang REQUIRED)
 find_package(Protobuf REQUIRED)
-find_package(Boost REQUIRED COMPONENTS filesystem program_options)
+find_package(Boost REQUIRED COMPONENTS system filesystem program_options)
 
 include_directories(include/)
 
@@ -49,7 +49,7 @@ add_library(autoffi STATIC
 add_library(autoffiClang STATIC src/clang.cpp src/exepath.cpp)
 target_link_libraries(autoffi ${PROTOBUF_LIBRARIES})
 target_link_libraries(autoffiClang autoffi ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
-target_link_libraries(affc autoffiClang ${Boost_LIBRARIES})
+target_link_libraries(affc autoffiClang ${Boost_LIBRARIES} ${LLVM_LIBRARIES} ${CLANG_LIBRARIES})
  
 file(COPY vendor/libcxx/include DESTINATION "${CMAKE_BINARY_DIR}/libcxx")
 file(COPY vendor/clang/include DESTINATION "${CMAKE_BINARY_DIR}/clang")

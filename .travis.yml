@@ -14,8 +14,8 @@ matrix:
     - sudo apt-get update
     - sudo apt-get install -y --only-upgrade cmake
     - sudo apt-get install -y clang-3.9 libclang-3.9-dev libz-dev libedit-dev
-    - ./scripts/install_boost.sh
-    - ./scripts/install_protobuf.sh .
+    - ./scripts/install_boost.sh .
+    - ./scripts/install_protobuf.sh
   - os: osx
     osx_image: xcode8.2
     install:
