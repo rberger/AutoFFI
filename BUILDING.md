@@ -43,8 +43,8 @@ deb-src http://apt.llvm.org/zesty/ llvm-toolchain-zesty-3.9 main
 The following assumes you have Ubuntu Xenial (16.04) LTS installed:
 
 ```
-echo "deb http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main" | sudo tee -a /etc/apt/sources.list
-echo "deb-src http://apt.llvm.org/trusty/ llvm-toolchain-trusty-3.9 main" |
+echo "deb http://apt.llvm.org/xenial/ llvm-toolchain-trusty-3.9 main" | sudo tee -a /etc/apt/sources.list
+echo "deb-src http://apt.llvm.org/xenial/ llvm-toolchain-trusty-3.9 main" | sudo tee -a /etc/apt/sources.list
 ```
 
 Finally, install LLVM and Clang:
@@ -59,10 +59,9 @@ On recent versions of Ubuntu and Debian, it should be sufficient to install the 
 sudo apt-get install protobuf-compiler libprotobuf-dev libboost-{filesystem,program-options}-dev libedit-dev libz-dev
 ```
 
-One last step is to generate the protobuf translation units according to your specific version:
-
-
-The instructions for installing AutoFFI then are pretty simple:
+One last step is to generate the protobuf header and translation unit according
+to your specific version. The instructions for installing AutoFFI then are
+pretty simple:
 
 ```bash
 git clone https://github.com/AutoFFI/AutoFFI && cd AutoFFI/
